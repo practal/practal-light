@@ -34,7 +34,13 @@ public class PractalExprGrammar : TextGrammar {
 
     @Sym var _Space : T
     @Sym var _OptSpace : T
-        
+    
+    @Sym var ConcreteSyntaxSpec : N
+    @Sym var _ConcreteSyntaxFragment : N
+    @Sym var CSF_Space : T
+    @Sym var CSF_Var : T
+    @Sym var CSF_Text : T
+
     public func addIDRules() {
         add {
             Hyphen.rule {
@@ -143,6 +149,30 @@ public class PractalExprGrammar : TextGrammar {
         }
     }
     
+    public func addConcreteSyntaxSpecRules() {
+        add {
+            ConcreteSyntaxSpec.rule {
+                Repeat1Greedy(_ConcreteSyntaxFragment)
+            }
+            
+            _ConcreteSyntaxFragment.rule {
+                OrGreedy(CSF_Var, CSF_Space, CSF_Text)
+            }
+            
+            CSF_Space.rule {
+                _Space
+            }
+            
+            CSF_Var.rule {
+                Id
+            }
+            
+            CSF_Text.rule {
+                Char
+            }
+        }
+    }
+    
     public override func build() {
         super.build()
         
@@ -150,6 +180,8 @@ public class PractalExprGrammar : TextGrammar {
         addIDRules()
         addVariableRules()
         addConstantRules()
+        
+        addConcreteSyntaxSpecRules()
         
         add {
             PractalExpr.rule {

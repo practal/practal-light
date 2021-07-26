@@ -23,4 +23,15 @@
             let t2 : Term = .constant("eq", binders: [], params: [xy, eq, u])
             XCTAssertEqual(terms, Set([t1, t2]))
         }
+        
+        func testCSS() {
+            let parser = PractalExprParser()
+            let css = parser.parse(css: " ∀ x : Type. B -->   ye:d ")
+            XCTAssertEqual(css, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var("x"), .Text(":"), .Space, .Var("Type"), .Text("."), .Space,
+                                                           .Var("B"), .Text("-->"), .Space, .Var("ye"), .Text(":"), .Var("d")]))
+            let selected = css!.selectVars { v in v == "x" || v == "B" || v == "d" }
+            print("selected = \(selected)")
+            XCTAssertEqual(selected, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var("x"), .Text(":"), .Space, .Text("Type"), .Text("."), .Space,
+                                                                .Var("B"), .Text("-->"), .Space, .Text("ye"), .Text(":"), .Var("d")]))
+        }
     }
