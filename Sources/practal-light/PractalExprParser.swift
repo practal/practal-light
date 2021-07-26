@@ -8,14 +8,6 @@ import Foundation
 import ParsingKit
 import FirstOrderDeepEmbedding
 
-public extension SyntaxTree {
-    
-    subscript (_ index : Int) -> SyntaxTree {
-        return children[index]
-    }
-    
-}
-
 public class PractalExprParser {
     
     public let grammar : PractalExprGrammar
@@ -59,13 +51,13 @@ public class PractalExprParser {
     }
     
     public func convert(input : String, syntaxTrees : [SyntaxTree]) -> [Term] {
-        let PRACTAL_EXPR = grammar.PractalExpr.name.description
-        let VARIABLE = grammar.Variable.name.description
-        let CONSTANT = grammar.Constant.name.description
-        let VAR = grammar.Var.name.description
-        let CONST = grammar.Const.name.description
-        let VARLIST = grammar.VarList.name.description
-        let EXPRLIST = grammar.ExprList.name.description
+        let PRACTAL_EXPR = "\(grammar.PractalExpr)"
+        let VARIABLE = "\(grammar.Variable)"
+        let CONSTANT = "\(grammar.Constant)"
+        let VAR = "\(grammar.Var)"
+        let CONST = "\(grammar.Const)"
+        let VARLIST = "\(grammar.VarList)"
+        let EXPRLIST = "\(grammar.ExprList)"
         
         let input = Array(input)
 
