@@ -1,5 +1,5 @@
 //
-//  Syntax.swift
+//  ConstSyntax.swift
 //
 //  Created by Steven Obua on 26/07/2021.
 //
@@ -33,7 +33,7 @@ public struct AbstractSyntax {
 
 }
 
-public struct Syntax {
+public struct ConstSyntax {
     
     public let abstract : AbstractSyntax
     

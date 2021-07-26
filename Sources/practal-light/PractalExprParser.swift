@@ -12,9 +12,9 @@ public class PractalExprParser {
     
     public let grammar : PractalExprGrammar
     public let parser : Parser<Character>
-    public let constants : [Const : Syntax]
+    public let constants : [Const : ConstSyntax]
     
-    public init(constants : [Const : Syntax] = [:]) {
+    public init(constants : [Const : ConstSyntax] = [:]) {
         self.grammar = PractalExprGrammar()
         self.parser = grammar.parser()
         self.constants = constants
