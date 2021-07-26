@@ -82,6 +82,22 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
         }
         return ConcreteSyntax(fragments: fs)
     }
+    
+    public var vars : [Var] {
+        var vs : [Var] = []
+        for f in fragments {
+            switch f {
+            case let .Var(v): vs.append(v)
+            case .Space, .Text: break
+            }
+        }
+        return vs
+    }
+    
+    public var hasDuplicateVarOccurrences : Bool {
+        let vs = vars
+        return vs.count != Set(vs).count
+    }
 
 }
 
