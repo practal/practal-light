@@ -29,6 +29,20 @@ extension Term {
         case .constant: return true
         }
     }
+    
+    public var `var` : Var? {
+        switch self {
+        case let .variable(v, dependencies: _): return v
+        case .constant: return nil
+        }
+    }
+    
+    public var const : Const? {
+        switch self {
+        case let .constant(c, binders: _, params: _): return c
+        case .variable: return nil
+        }
+    }
 
 }
 

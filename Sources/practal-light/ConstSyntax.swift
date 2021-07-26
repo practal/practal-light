@@ -111,10 +111,10 @@ public struct AbstractSyntax : Hashable {
 
 }
 
-public struct ConstSyntax : Hashable {
+public struct ConstSyntax {
     
-    public let abstract : AbstractSyntax
+    public let abstractSyntax : AbstractSyntax
     
-    public let concrete : [ConcreteSyntax]
-    
+    public let concreteSyntaxes : [ConcreteSyntax]
+
 }
