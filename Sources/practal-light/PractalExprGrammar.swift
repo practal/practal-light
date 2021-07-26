@@ -16,6 +16,8 @@ public class PractalExprGrammar : TextGrammar {
     @Sym var PractalExpr : N
     @Sym var _Expr : N
     
+    @Sym var ExprList : N
+
     @Sym var Variable : N
     @Sym var Constant : N
     @Sym var Var : T
@@ -99,7 +101,7 @@ public class PractalExprGrammar : TextGrammar {
             }
             
             _VarList1.rule {
-                _VarList1
+                _VarList1[1]
                 _OptSpace[0]
                 const(",")
                 _OptSpace[1]
@@ -108,7 +110,7 @@ public class PractalExprGrammar : TextGrammar {
             
             VarList.rule {
                 _OptSpace[0]
-                VarList
+                _VarList1
                 _OptSpace[1]
             }
             
@@ -120,8 +122,23 @@ public class PractalExprGrammar : TextGrammar {
     
     public func addConstantRules() {
         add {
+            ExprList.rule {
+                Seq(_Expr, RepeatGreedy(Seq(_OptSpace, _Expr)))
+            }
+            
+            ExprList.rule { }
+                        
             Const.rule {
                 Id
+            }
+                        
+            Constant.rule {
+                Const
+                VarList
+                const(".")
+                _OptSpace[0]
+                ExprList
+                _OptSpace[1]
             }
         }
     }

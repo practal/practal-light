@@ -9,7 +9,8 @@ import Foundation
 public struct ConcreteSyntax {
     
     public enum Fragment {
-        case Slot(Var)
+        case Binder(Int)
+        case Param(Int)
         case Space
         case Text(String)
     }
