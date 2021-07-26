@@ -107,7 +107,11 @@ public struct AbstractSyntax : Hashable {
     
     public let binders : [Var]
     
-    public let params : [Var]
+    public let params : [Term]
+    
+    public var term : Term {
+        return .constant(const, binders: binders, params: params)
+    }
 
 }
 
