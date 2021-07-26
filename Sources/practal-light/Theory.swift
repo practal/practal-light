@@ -78,7 +78,43 @@ public final class Theory {
     }
     
     public func checkWellformedness(_ term : Term) -> [Var : Int]? {
-        fatalError()
+        var freeVars : [Var : Int] = [:]
+        func check(boundVars : Set<Var>, term : Term) -> Bool {
+            switch term {
+            case let .variable(v, dependencies: deps):
+                guard !boundVars.contains(v) else {
+                    return deps.isEmpty
+                }
+                guard deps.count == Set(deps).count else { return false }
+                for d in deps {
+                    guard boundVars.contains(d) else { return false }
+                }
+                if let arity = freeVars[v] {
+                    return arity == deps.count
+                } else {
+                    freeVars[v] = deps.count
+                }
+                return true
+            case let .constant(const, binders: binders, params: params):
+                guard let abstractSyntax = _constants[const]?.abstractSyntax else {
+                    return false
+                }
+                guard binders.count == abstractSyntax.binders.count else { return false }
+                guard binders.count == Set(binders).count else { return false }
+                var boundVars = boundVars
+                boundVars.formUnion(binders)
+                guard params.count == abstractSyntax.params.count else { return false }
+                for p in params {
+                    guard check(boundVars: boundVars, term: p) else { return false }
+                }
+                return true
+            }
+        }
+        if check(boundVars: [], term: term) {
+            return freeVars
+        } else {
+            return nil
+        }
     }
     
     public func isWellformed(_ term : Term) -> Bool {
