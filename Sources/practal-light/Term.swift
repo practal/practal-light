@@ -6,10 +6,10 @@
 
 import Foundation
 
-public typealias VarName = String
-public typealias ConstId = String
+public typealias Var = String
+public typealias Const = String
 
 public enum Term {
-    case variable(name: VarName, dependencies: [VarName])
-    case application(id: ConstId, binders: [VarName], params: [Term])
+    case variable(Var, dependencies: [Var])
+    case constant(Const, binders: [Var], params: [Term])
 }

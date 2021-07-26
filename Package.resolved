@@ -1,0 +1,43 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "DynamicCodable",
+        "repositoryURL": "https://github.com/phlegmaticprogrammer/DynamicCodable",
+        "state": {
+          "branch": null,
+          "revision": "156418e70f7accff06c7bae5a046654c9b78b0a7",
+          "version": "0.0.4"
+        }
+      },
+      {
+        "package": "EarleyLocalLexing",
+        "repositoryURL": "https://github.com/phlegmaticprogrammer/EarleyLocalLexing",
+        "state": {
+          "branch": null,
+          "revision": "10ea39cd8dc051b2cd1de0d8fde36740facd3ebc",
+          "version": "0.6.9"
+        }
+      },
+      {
+        "package": "FirstOrderDeepEmbedding",
+        "repositoryURL": "https://github.com/phlegmaticprogrammer/FirstOrderDeepEmbedding",
+        "state": {
+          "branch": null,
+          "revision": "c3a9e251a193576941655291384b1e54ba9fa899",
+          "version": "0.6.2"
+        }
+      },
+      {
+        "package": "ParsingKit",
+        "repositoryURL": "https://github.com/phlegmaticprogrammer/ParsingKit",
+        "state": {
+          "branch": null,
+          "revision": "83f6fd948d4f17ef679b92725581738100cbfec5",
+          "version": "0.5.1"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
