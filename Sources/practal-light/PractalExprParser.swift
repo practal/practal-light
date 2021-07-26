@@ -107,12 +107,12 @@ public class PractalExprParser {
         
         func varOf(_ syntaxTree : SyntaxTree) -> Var {
             check(syntaxTree, symbol: VAR)
-            return textOf(syntaxTree)
+            return Id(textOf(syntaxTree))!
         }
         
         func constOf(_ syntaxTree : SyntaxTree) -> Const {
             check(syntaxTree, symbol: CONST)
-            return textOf(syntaxTree)
+            return Id(textOf(syntaxTree))!
         }
         
         func varListOf(_ syntaxTree : SyntaxTree) -> [Var] {
@@ -165,7 +165,7 @@ public class PractalExprParser {
         
         func csfOf(_ syntaxTree : SyntaxTree) -> ConcreteSyntax.Fragment {
             switch syntaxTree.symbol {
-            case CSF_VAR: return .Var(textOf(syntaxTree))
+            case CSF_VAR: return .Var(Id(textOf(syntaxTree))!)
             case CSF_SPACE: return .Space
             case CSF_TEXT: return .Text(textOf(syntaxTree))
             default: fatalError("don't know concrete syntax fragment '\(syntaxTree.symbol)'")

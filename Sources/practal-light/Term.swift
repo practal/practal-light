@@ -6,8 +6,8 @@
 
 import Foundation
 
-public typealias Var = String
-public typealias Const = String
+public typealias Var = Id
+public typealias Const = Id
 
 public enum Term : Hashable {
     case variable(Var, dependencies: [Var])
