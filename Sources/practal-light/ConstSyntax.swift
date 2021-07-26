@@ -98,6 +98,7 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
         let vs = vars
         return vs.count != Set(vs).count
     }
+    
 
 }
 
@@ -112,13 +113,27 @@ public struct AbstractSyntax : Hashable {
     public var term : Term {
         return .constant(const, binders: binders, params: params)
     }
-
+    
+    public var freeVars : [Var : Int] {
+        var vs : [Var : Int] = [:]
+        for p in params {
+            switch p {
+            case let .variable(v, deps): vs[v] = deps.count
+            case .constant: fatalError("internal error")
+            }
+        }
+        return vs
+    }
+    
 }
 
 public struct ConstSyntax {
     
     public let abstractSyntax : AbstractSyntax
     
-    public let concreteSyntaxes : [ConcreteSyntax]
+    public var concreteSyntaxes : [ConcreteSyntax]
 
+    public mutating func append(_ concreteSyntax : ConcreteSyntax) {
+        concreteSyntaxes.append(concreteSyntax)
+    }
 }

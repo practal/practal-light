@@ -73,6 +73,7 @@ public final class Theory {
             let abstractSyntax = AbstractSyntax(const: c, binders: binders, params: params)
             let syntax = ConstSyntax(abstractSyntax: abstractSyntax, concreteSyntaxes: [])
             _constants[c] = syntax
+            invalidateParser()
             return c
         }
     }
@@ -132,19 +133,36 @@ public final class Theory {
             fatalError("The definition '\(definition)' is not well-formed")
         }
         let const = introduce(constant: constant)
-        let lhs = _constants[const]!.abstractSyntax.term
-        let freeVarsLHS = freeVarsOf(lhs)
+        let freeVarsLHS = _constants[const]!.abstractSyntax.freeVars
         for (v, i) in freeVarsRHS {
             guard let j = freeVarsLHS[v], i == j else {
                 fatalError("The variable '\(v)' is free and not properly bound in the definition")
             }
         }
         _definitions[const] = definition
+        invalidateParser()
         return const
     }
 
     private func addSyntax(const : Const, concreteSyntax : ConcreteSyntax) {
-        fatalError()
+        func error(_ s : String) -> Never {
+            fatalError("Cannot add syntax to constant '\(const)': \(s)")
+        }
+        guard let syntax = _constants[const] else {
+            error("no such constant exists")
+        }
+        let vars = syntax.abstractSyntax.freeVars
+        let concreteSyntax = concreteSyntax.selectVars { v in vars[v] != nil }
+        guard !concreteSyntax.hasDuplicateVarOccurrences else {
+            error("duplicate free variables found in the concrete syntax")
+        }
+        guard Set(concreteSyntax.vars).count == vars.count else {
+            error("some free variables of the abstract syntax do not occur in the concrete syntax")
+        }
+        var newSyntax = syntax
+        newSyntax.append(concreteSyntax)
+        _constants[const] = newSyntax
+        invalidateParser()
     }
     
     public func addSyntax(const : Const, syntax : String) {
