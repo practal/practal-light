@@ -69,6 +69,8 @@
             let g = theory.parse("λ x : P[x]. u")
             print("g = \(g)")
             XCTAssertNil(theory.checkWellformedness(g))
+            let h = theory.parse("λ x : x. P[x]")
+            XCTAssertEqual(theory.checkWellformedness(h), [v("x") : 0, v("P") : 1])
         }
         
         func testPracticalTypes() {
