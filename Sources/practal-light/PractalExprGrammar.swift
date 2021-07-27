@@ -40,6 +40,13 @@ public class PractalExprGrammar : TextGrammar {
     @Sym var CSF_Space : T
     @Sym var CSF_Var : T
     @Sym var CSF_Text : T
+    
+    private let constants : [Const : ConstSyntax]
+    
+    public init(constants : [Const : ConstSyntax]) {
+        self.constants = constants
+        super.init()
+    }
 
     public func addIDRules() {
         add {
@@ -148,6 +155,66 @@ public class PractalExprGrammar : TextGrammar {
             }
         }
     }
+
+    public func constConcreteRuleBody(abstractSyntax : AbstractSyntax, concreteSyntax : ConcreteSyntax) -> RuleBody {
+        var elems : [RuleBody] = []
+        var i = 0
+        var first : Bool = true
+        for fragment in concreteSyntax.fragments {
+            switch fragment {
+            case .Space:
+                if !first {
+                    elems.append(_OptSpace[i])
+                    first = true
+                }
+            case .Text(let syntax):
+                if !first {
+                    elems.append(_OptSpace[i])
+                }
+                first = false
+                elems.append(const(syntax))
+            case let .Var(v):
+                if abstractSyntax.binders.contains(v) {
+                    elems.append(Var[i])
+                }
+                if !first {
+                    elems.append(_OptSpace[i])
+                }
+                first = false
+                if abstractSyntax.binders.contains(v) {
+                    elems.append(Var[i])
+                } else {
+                    elems.append(_Expr[i])
+                }
+            }
+            i += 1
+        }
+        return collectRuleBody(elems)
+    }
+    
+    public let CONST_CONCRETE_PREFIX = "const-concrete-"
+
+    public func addConstSyntaxRules(const : Const, syntax : ConstSyntax) {
+        guard let syntax = constants[const] else { return }
+        for i in 0 ..< syntax.concreteSyntaxes.count {
+            let concrete_const = nonterminal(SymbolName("\(CONST_CONCRETE_PREFIX)\(i)-\(const.id)"))
+            let concreteSyntax = syntax.concreteSyntaxes[i]
+            add {
+                _Expr.rule {
+                    concrete_const
+                }
+                concrete_const.rule {
+                    constConcreteRuleBody(abstractSyntax: syntax.abstractSyntax, concreteSyntax: concreteSyntax)
+                }
+            }
+        }
+    }
+
+    public func addConcreteSyntaxRules() {
+        for (const, syntax) in constants {
+            addConstSyntaxRules(const: const, syntax: syntax)
+        }
+    }
     
     public func addConcreteSyntaxSpecRules() {
         add {
@@ -180,6 +247,7 @@ public class PractalExprGrammar : TextGrammar {
         addIDRules()
         addVariableRules()
         addConstantRules()
+        addConcreteSyntaxRules()
         
         addConcreteSyntaxSpecRules()
         

@@ -15,7 +15,7 @@ public class PractalExprParser {
     public let constants : [Const : ConstSyntax]
     
     public init(constants : [Const : ConstSyntax] = [:]) {
-        self.grammar = PractalExprGrammar()
+        self.grammar = PractalExprGrammar(constants: constants)
         self.parser = grammar.parser()
         self.constants = constants
     }
@@ -40,12 +40,6 @@ public class PractalExprParser {
             }
             let tree = SyntaxTree.from(parseTree: parseTree, grammar: grammar)
             let trees = tree.explode()
-            print("There are \(trees.count) trees:")
-            print("-------")
-            for tree in trees {
-                tree.debug()
-                print("-------")
-            }
             return Set(convert(expr: expr, syntaxTrees: Array(trees)))
         }
     }
@@ -70,12 +64,6 @@ public class PractalExprParser {
             }
             let tree = SyntaxTree.from(parseTree: parseTree, grammar: grammar)
             let trees = tree.explode()
-            print("There are \(trees.count) trees:")
-            print("-------")
-            for tree in trees {
-                tree.debug()
-                print("-------")
-            }
             guard trees.count == 1 else {
                 return nil
             }
@@ -92,6 +80,8 @@ public class PractalExprParser {
         let CONST = "\(grammar.Const)"
         let VARLIST = "\(grammar.VarList)"
         let EXPRLIST = "\(grammar.ExprList)"
+        
+        let CONCRETE_PREFIX = grammar.CONST_CONCRETE_PREFIX
         
         let input = Array(input)
 
@@ -125,6 +115,32 @@ public class PractalExprParser {
             return syntaxTree.children.map(conv)
         }
                 
+        func convConcrete(abstractSyntax : AbstractSyntax, concreteSyntax : ConcreteSyntax, _ syntaxTree : SyntaxTree) -> Term {
+            var binders = [Var?](repeating: nil, count: abstractSyntax.binders.count)
+            var params = [Term?](repeating: nil, count: abstractSyntax.params.count)
+            for (i, v) in concreteSyntax.vars.enumerated() {
+                if let b = abstractSyntax.binderOf(v) {
+                    binders[b] = varOf(syntaxTree[i])
+                } else if let p = abstractSyntax.paramOf(v) {
+                    params[p] = conv(syntaxTree[i])
+                } else {
+                    fatalError("internal error")
+                }
+            }
+            return .constant(abstractSyntax.const, binders: binders.map { b in b!}, params: params.map { p in p!})
+        }
+        
+        func extractConcrete(symbol : String) -> (const : Const, index : Int)? {
+            guard symbol.hasPrefix(CONCRETE_PREFIX) else { return nil }
+            var constname = String(symbol.dropFirst(CONCRETE_PREFIX.count))
+            let i = constname.firstIndex(of: "-")!
+            let index = Int(constname[..<i])!
+            let j = constname.index(after: i)
+            constname = String(constname[j...])
+            let const = Const(constname)!
+            return (const: const, index: index)
+        }
+        
         func conv(_ syntaxTree : SyntaxTree) -> Term {
             switch (syntaxTree.symbol, syntaxTree.children.count) {
             case (PRACTAL_EXPR, 1): return conv(syntaxTree.children[0])
@@ -138,7 +154,13 @@ public class PractalExprParser {
                 let binders = varListOf(syntaxTree[1])
                 let params = exprListOf(syntaxTree[2])
                 return .constant(c, binders: binders, params: params)
-            case let (symbol, arity): fatalError("cannot convert symbol '\(symbol)' with arity \(arity)")
+            case let (symbol, arity):
+                guard let (const, index) = extractConcrete(symbol: symbol) else {
+                    fatalError("cannot convert symbol '\(symbol)' with arity \(arity)")
+                }
+                let syntax = constants[const]!
+                let concreteSyntax = syntax.concreteSyntaxes[index]
+                return convConcrete(abstractSyntax: syntax.abstractSyntax, concreteSyntax: concreteSyntax, syntaxTree)
             }
         }
         

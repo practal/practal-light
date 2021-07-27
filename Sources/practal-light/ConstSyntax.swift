@@ -125,6 +125,19 @@ public struct AbstractSyntax : Hashable {
         return vs
     }
     
+    public func binderOf(_ v : Var) -> Int? {
+        return binders.firstIndex(of: v)
+    }
+    
+    public func paramOf(_ v : Var) -> Int? {
+        params.firstIndex { term in
+            switch term {
+            case let .variable(w, _) where v == w: return true
+            default: return false
+            }
+        }
+    }
+    
 }
 
 public struct ConstSyntax {
