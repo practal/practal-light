@@ -21,6 +21,10 @@ public final class Theory {
         self.dirtyParser = false
     }
     
+    public subscript(_ const : Const) -> ConstSyntax? {
+        return _constants[const]
+    }
+    
     private func invalidateParser() {
         dirtyParser = true
     }
@@ -190,7 +194,7 @@ public final class Theory {
         guard let syntax = _constants[const] else {
             error("no such constant exists")
         }
-        let vars = syntax.abstractSyntax.freeVars
+        let vars = syntax.abstractSyntax.allVars
         let concreteSyntax = concreteSyntax.selectVars { v in vars[v] != nil }
         guard !concreteSyntax.hasDuplicateVarOccurrences else {
             error("duplicate free variables found in the concrete syntax")

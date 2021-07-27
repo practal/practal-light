@@ -59,10 +59,17 @@
             print("t = \(t)")
             XCTAssertEqual(t, e("eq. u (eq. v w)"))
             print("pretty = '\(theory.pretty(t))'")
+            XCTAssertEqual(theory.pretty(t), "u = (v = w)")
+            theory.introduce("abs x. T B[x]", syntax: "λ x : T. B")
+            let lam = theory.parse("λ x : y. z")
+            XCTAssertEqual(lam, e("abs x. y z"))
         }
         
         func testPracticalTypes() {
             let theory = Theory()
-            
+            theory.introduce("eq. A B", syntax: "A = B")
+            let abs = theory.introduce("abs x. T B[x]", syntax: "λ x : T. B")
+            print(theory[abs])
+            print(theory.parse("λ x : y. z"))
         }
     }

@@ -116,6 +116,14 @@ public struct AbstractSyntax : Hashable {
         return vs
     }
     
+    public var allVars : [Var : Int] {
+        var vs = freeVars
+        for v in binders {
+            vs[v] = 0
+        }
+        return vs
+    }
+    
     public func binderOf(_ v : Var) -> Int? {
         return binders.firstIndex(of: v)
     }

@@ -174,9 +174,6 @@ public class PractalExprGrammar : TextGrammar {
                 first = false
                 elems.append(const(syntax))
             case let .Var(v):
-                if abstractSyntax.binders.contains(v) {
-                    elems.append(Var[i])
-                }
                 if !first {
                     elems.append(_OptSpace[i])
                 }
