@@ -54,11 +54,7 @@ public final class Theory {
         }
         return terms.first!
     }
-    
-    /*private func fullyBracketed(_ expr : String) -> Bool {
-        return false
-    }*/
-    
+        
     public func pretty(_ expr : Term) -> String {
         switch expr {
         case .variable: return expr.description
