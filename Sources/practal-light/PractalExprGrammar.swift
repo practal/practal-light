@@ -278,7 +278,7 @@ public class PractalExprGrammar : TextGrammar {
             }
             
             _ConcreteSyntaxFragment.rule {
-                OrGreedy(CSF_Var, CSF_Space, Seq(const("^"), CSF_RaisedVar), CSF_Text)
+                OrGreedy(CSF_RaisedVar, CSF_Space, Seq(const("`"), CSF_Var), CSF_Text)
             }
             
             CSF_Space.rule {

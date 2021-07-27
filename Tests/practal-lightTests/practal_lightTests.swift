@@ -92,27 +92,26 @@
             let TYPE_RPRIO : Float = 0.3
                         
             let theory = Theory()
-            theory.introduce("(eq. A B)", syntax: "^A = ^B", priority: REL_PRIO)
+            theory.introduce("(eq. A B)", syntax: "A = B", priority: REL_PRIO)
             
-            theory.introduce("(abs x. T B[x])", syntax: "λ x : T. B", priority: BINDER_PRIO)
-            theory.introduce("(app. A B)", syntax: "A ^B", priority: APP_PRIO)
+            theory.introduce("(abs x. T B[x])", syntax: "λ x : T. `B", priority: BINDER_PRIO)
+            theory.introduce("(app. A B)", syntax: "`A B", priority: APP_PRIO)
             theory.introduce("(in. A T)", syntax: "A : T", priority: REL_PRIO)
             
-            theory.introduce("(all x. P[x])", syntax: "∀ x. P", priority: BINDER_PRIO)
-            theory.introduce("(choose x. T P[x])", syntax: "ε x : T. P", priority: BINDER_PRIO)
-            theory.introduce("(imp. A B)", syntax: "A ⟶ B", priority: LOGIC_PRIO + IMP_RPRIO)
+            theory.introduce("(all x. P[x])", syntax: "∀ x. `P", priority: BINDER_PRIO)
+            theory.introduce("(choose x. T P[x])", syntax: "ε x : T. `P", priority: BINDER_PRIO)
+            theory.introduce("(imp. A B)", syntax: "A ⟶ `B", priority: LOGIC_PRIO + IMP_RPRIO)
             theory.introduce("(false.)", syntax: "⊥")
             
             theory.introduce("(Prop.)", syntax: "ℙ")
             theory.introduce("(Nat.)", syntax: "ℕ")
-            theory.introduce("(Fun. U V)", syntax: "U → V", priority: TYPE_PRIO + FUN_RPRIO)
+            theory.introduce("(Fun. U V)", syntax: "U → `V", priority: TYPE_PRIO + FUN_RPRIO)
             theory.introduce("(Pred x. T P[x])", syntax: "{ x : T | P }")
             theory.introduce("(Type. i)", syntax: "Type~i", priority: TYPE_PRIO + TYPE_RPRIO)
-            theory.introduce("(Union i. I T[i])", syntax: "⋃ i : I. T", priority: TYPE_PRIO + UNION_RPRIO)
+            theory.introduce("(Union i. I T[i])", syntax: "⋃ i : I. `T", priority: TYPE_PRIO + UNION_RPRIO)
             
-            print(theory.pretty(theory.parse("Type~i → V")))
-            print(theory.pretty(theory.parse("A B C")))
-            print(theory.pretty(theory.parse("A = B = C")))
-
+            XCTAssertEqual(theory.parse("Type~i → V"), theory.parse("(Type~i) → V"))
+            XCTAssertEqual(theory.parse("A B C"), theory.parse("(A B) C"))
+            XCTAssertTrue(theory.parseAll("A = B = C").isEmpty)
         }
     }
