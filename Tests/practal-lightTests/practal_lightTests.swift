@@ -35,14 +35,14 @@
         func testCSS() {
             let parser = PractalExprParser()
             let css = parser.parse(css: " ∀ x : Type. B -->   ye:d ")
-            XCTAssertEqual(css, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x"), raised: false), .Space, .Text(":"), .Space, .Var(v("Type"), raised: false), .Text("."), .Space,
-                                                           .Var(v("B"), raised: false), .Space, .Text("-->"), .Space, .Var(v("ye"), raised: false), .Text(":"), .Var(v("d"), raised: false)], priority: nil))
+            XCTAssertEqual(css, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x"), raised: true), .Space, .Text(":"), .Space, .Var(v("Type"), raised: true), .Text("."), .Space,
+                                                           .Var(v("B"), raised: true), .Space, .Text("-->"), .Space, .Var(v("ye"), raised: true), .Text(":"), .Var(v("d"), raised: true)], priority: nil))
             let selected = css!.selectVars { x in x == v("x") || x == v("B") || x == v("d") }
             print("selected = \(selected)")
-            XCTAssertEqual(selected, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x"), raised: false), .Space, .Text(":"), .Space, .Text("Type"), .Text("."), .Space,
-                                                                .Var(v("B"), raised: false), .Space, .Text("-->"), .Space, .Text("ye"), .Text(":"), .Var(v("d"), raised: false)], priority: nil))
+            XCTAssertEqual(selected, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x"), raised: true), .Space, .Text(":"), .Space, .Text("Type"), .Text("."), .Space,
+                                                                .Var(v("B"), raised: true), .Space, .Text("-->"), .Space, .Text("ye"), .Text(":"), .Var(v("d"), raised: true)], priority: nil))
             let eqAB = parser.parse(css: "A = B")
-            XCTAssertEqual(eqAB, ConcreteSyntax(fragments: [.Var(v("A"), raised: false), .Space, .Text("="), .Space, .Var(v("B"), raised: false)], priority: nil))
+            XCTAssertEqual(eqAB, ConcreteSyntax(fragments: [.Var(v("A"), raised: true), .Space, .Text("="), .Space, .Var(v("B"), raised: true)], priority: nil))
         }
         
         func testTheory() {
@@ -110,8 +110,15 @@
             theory.introduce("(Type. i)", syntax: "Type~i", priority: TYPE_PRIO + TYPE_RPRIO)
             theory.introduce("(Union i. I T[i])", syntax: "⋃ i : I. `T", priority: TYPE_PRIO + UNION_RPRIO)
             
+            func show(_ expr : String) {
+                let t = theory.parse(expr)
+                print(theory.pretty(t))
+            }
+            
             XCTAssertEqual(theory.parse("Type~i → V"), theory.parse("(Type~i) → V"))
             XCTAssertEqual(theory.parse("A B C"), theory.parse("(A B) C"))
             XCTAssertTrue(theory.parseAll("A = B = C").isEmpty)
+            
+            
         }
     }

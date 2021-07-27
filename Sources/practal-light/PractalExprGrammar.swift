@@ -296,6 +296,7 @@ public class PractalExprGrammar : TextGrammar {
             CSF_Text.rule {
                 Char
             }
+            
         }
     }
     

@@ -30,8 +30,8 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
         let frags : [String] = fragments.map { f in
             switch f {
             case .Space: return "␣"
-            case let .Var(v, raised: raised): if raised { return "^\(v)" } else { return "\(v)" }
-            case .Text(let t): return "`\(t)`"
+            case let .Var(v, raised: raised): if raised { return "\(v)" } else { return "`\(v)" }
+            case .Text(let t): return "'\(t)'"
             }
         }
         return frags.joined()
