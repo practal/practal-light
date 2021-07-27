@@ -83,7 +83,7 @@
             let APP_PRIO : Float = 40
             
             let IMP_RPRIO : Float = 0.1
-            let OR_PRIO : Float = 0.2
+            let OR_RPRIO : Float = 0.2
             let AND_RPRIO : Float = 0.3
             let NOT_RPRIO : Float = 0.4
             
@@ -119,6 +119,17 @@
             XCTAssertEqual(theory.parse("A B C"), theory.parse("(A B) C"))
             XCTAssertTrue(theory.parseAll("A = B = C").isEmpty)
             
+            theory.define("(not. P)", "P ⟶ ⊥", syntax: "¬`P", priority: LOGIC_PRIO + NOT_RPRIO)
+            theory.define("(true.)", "¬ ⊥", syntax: "⊤")
+            theory.define("(or. P Q)", "¬P ⟶ Q", syntax: "`P ∨ Q", priority: LOGIC_PRIO + OR_RPRIO)
+            theory.define("(and. P Q)", "¬(¬P ∨ ¬Q)", syntax: "`P ∧ Q", priority: LOGIC_PRIO + AND_RPRIO)
+            theory.define("(equiv. P Q)", "(P ⟶ Q) ∧ (Q ⟶ P)", syntax: "P ≡ Q", priority: REL_PRIO)
+            theory.define("(neq. P Q)", "¬(P = Q)", syntax: "P ≠ Q", priority: REL_PRIO)
+            theory.define("(ex x. P[x])", "¬(∀ x. ¬P[x])", syntax: "∃ x. `P", priority: BINDER_PRIO)
+            theory.define("(all-in x. T P[x])", "∀ x. x : T ⟶ P[x]", syntax: "∀ x : T. `P", priority: BINDER_PRIO)
+            theory.define("(ex-in x. T P[x])", "∃ x. x : T ∧ P[x]", syntax: "∃ x : T. `P", priority: BINDER_PRIO)
+            //theory.define("(sub-type. U V)")
+            //theory.define("(.neq A B)", "", syntax: "A ≠ B")
             
         }
     }
