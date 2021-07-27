@@ -67,7 +67,7 @@ public final class Theory {
                 for fragment in concreteSyntax.fragments {
                     switch fragment {
                     case .Space: result.append(" ")
-                    case let .Var(v):
+                    case let .Var(v, raised: _):
                         if let b = abstractSyntax.binderOf(v) {
                             result.append(binders[b])
                         } else if let p = abstractSyntax.paramOf(v) {

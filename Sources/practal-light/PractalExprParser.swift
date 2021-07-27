@@ -170,6 +170,7 @@ public class PractalExprParser {
     public func convert(css input : String, syntaxTree : SyntaxTree, priority : Float?) -> ConcreteSyntax? {
         let CSS = "\(grammar.ConcreteSyntaxSpec)"
         let CSF_VAR = "\(grammar.CSF_Var)"
+        let CSF_RAISED_VAR = "\(grammar.CSF_RaisedVar)"
         let CSF_TEXT = "\(grammar.CSF_Text)"
         let CSF_SPACE = "\(grammar.CSF_Space)"
         
@@ -187,7 +188,8 @@ public class PractalExprParser {
         
         func csfOf(_ syntaxTree : SyntaxTree) -> ConcreteSyntax.Fragment {
             switch syntaxTree.symbol {
-            case CSF_VAR: return .Var(Id(textOf(syntaxTree))!)
+            case CSF_VAR: return .Var(Id(textOf(syntaxTree))!, raised: false)
+            case CSF_RAISED_VAR: return .Var(Id(textOf(syntaxTree))!, raised: true)
             case CSF_SPACE: return .Space
             case CSF_TEXT: return .Text(textOf(syntaxTree))
             default: fatalError("don't know concrete syntax fragment '\(syntaxTree.symbol)'")

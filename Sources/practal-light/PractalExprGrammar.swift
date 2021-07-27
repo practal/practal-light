@@ -40,6 +40,7 @@ public class PractalExprGrammar : TextGrammar {
     @Sym var _ConcreteSyntaxFragment : N
     @Sym var CSF_Space : T
     @Sym var CSF_Var : T
+    @Sym var CSF_RaisedVar : T
     @Sym var CSF_Text : T
     
     private let constants : [Const : ConstSyntax]
@@ -194,11 +195,12 @@ public class PractalExprGrammar : TextGrammar {
             }
         }
                 
-        func lookup(_ priority : Float?) -> (parent: N, child: N) {
-            guard let p = priority else { return (atomicExpr, topExpr) }
+        func lookup(_ priority : Float?) -> (parent: N, child: N, raised_child: N) {
+            guard let p = priority else { return (atomicExpr, topExpr, topExpr) }
             let rank = prioRanks[p]!
             let E = prioExprs[rank]
-            return (E, E)
+            let E_raised = rank+1 < prioExprs.count ? prioExprs[rank + 1] : atomicExpr
+            return (E, E, E_raised)
         }
         
         func debug() {
@@ -210,7 +212,7 @@ public class PractalExprGrammar : TextGrammar {
         
     }
 
-    func constConcreteRuleBody(abstractSyntax : AbstractSyntax, concreteSyntax : ConcreteSyntax, E : N) -> RuleBody {
+    func constConcreteRuleBody(abstractSyntax : AbstractSyntax, concreteSyntax : ConcreteSyntax, E : N, E_raised : N) -> RuleBody {
         var elems : [RuleBody] = []
         var i = 0
         var first : Bool = true
@@ -227,7 +229,7 @@ public class PractalExprGrammar : TextGrammar {
                 }
                 first = false
                 elems.append(const(syntax))
-            case let .Var(v):
+            case let .Var(v, raised: raised):
                 if !first {
                     elems.append(_OptSpace[i])
                 }
@@ -235,7 +237,7 @@ public class PractalExprGrammar : TextGrammar {
                 if abstractSyntax.binders.contains(v) {
                     elems.append(Var[i])
                 } else {
-                    elems.append(E[i])
+                    elems.append(raised ? E_raised[i] : E[i])
                 }
             }
             i += 1
@@ -256,7 +258,7 @@ public class PractalExprGrammar : TextGrammar {
                     concrete_const
                 }
                 concrete_const.rule {
-                    constConcreteRuleBody(abstractSyntax: syntax.abstractSyntax, concreteSyntax: concreteSyntax, E: E.child)
+                    constConcreteRuleBody(abstractSyntax: syntax.abstractSyntax, concreteSyntax: concreteSyntax, E: E.child, E_raised: E.raised_child)
                 }
             }
         }
@@ -276,7 +278,7 @@ public class PractalExprGrammar : TextGrammar {
             }
             
             _ConcreteSyntaxFragment.rule {
-                OrGreedy(CSF_Var, CSF_Space, CSF_Text)
+                OrGreedy(CSF_Var, CSF_Space, Seq(const("^"), CSF_RaisedVar), CSF_Text)
             }
             
             CSF_Space.rule {
@@ -287,6 +289,10 @@ public class PractalExprGrammar : TextGrammar {
                 Id
             }
             
+            CSF_RaisedVar.rule {
+                Id
+            }
+
             CSF_Text.rule {
                 Char
             }

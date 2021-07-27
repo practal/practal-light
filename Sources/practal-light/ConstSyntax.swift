@@ -9,7 +9,7 @@ import Foundation
 public struct ConcreteSyntax : CustomStringConvertible, Hashable {
     
     public enum Fragment : Hashable {
-        case Var(Var)
+        case Var(Var, raised: Bool)  // the raised vars get the next higher priority class
         case Space
         case Text(String)
     }
@@ -30,7 +30,7 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
         let frags : [String] = fragments.map { f in
             switch f {
             case .Space: return "␣"
-            case .Var(let v): return v.description
+            case let .Var(v, raised: raised): if raised { return "^\(v)" } else { return "\(v)" }
             case .Text(let t): return "`\(t)`"
             }
         }
@@ -74,7 +74,7 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
         let fs : [Fragment] = fragments.map { f in
             switch f {
             case .Space, .Text: return f
-            case .Var(let v): if select(v) { return f } else { return .Text(v.description) }
+            case let .Var(v, _): if select(v) { return f } else { return .Text(v.description) }
             }
         }
         return ConcreteSyntax(fragments: fs, priority: priority)
@@ -84,7 +84,7 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
         var vs : [Var] = []
         for f in fragments {
             switch f {
-            case let .Var(v): vs.append(v)
+            case let .Var(v, _): vs.append(v)
             case .Space, .Text: break
             }
         }

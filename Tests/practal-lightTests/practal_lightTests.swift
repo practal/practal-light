@@ -35,14 +35,14 @@
         func testCSS() {
             let parser = PractalExprParser()
             let css = parser.parse(css: " ∀ x : Type. B -->   ye:d ")
-            XCTAssertEqual(css, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x")), .Space, .Text(":"), .Space, .Var(v("Type")), .Text("."), .Space,
-                                                           .Var(v("B")), .Space, .Text("-->"), .Space, .Var(v("ye")), .Text(":"), .Var(v("d"))], priority: nil))
+            XCTAssertEqual(css, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x"), raised: false), .Space, .Text(":"), .Space, .Var(v("Type"), raised: false), .Text("."), .Space,
+                                                           .Var(v("B"), raised: false), .Space, .Text("-->"), .Space, .Var(v("ye"), raised: false), .Text(":"), .Var(v("d"), raised: false)], priority: nil))
             let selected = css!.selectVars { x in x == v("x") || x == v("B") || x == v("d") }
             print("selected = \(selected)")
-            XCTAssertEqual(selected, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x")), .Space, .Text(":"), .Space, .Text("Type"), .Text("."), .Space,
-                                                                .Var(v("B")), .Space, .Text("-->"), .Space, .Text("ye"), .Text(":"), .Var(v("d"))], priority: nil))
+            XCTAssertEqual(selected, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x"), raised: false), .Space, .Text(":"), .Space, .Text("Type"), .Text("."), .Space,
+                                                                .Var(v("B"), raised: false), .Space, .Text("-->"), .Space, .Text("ye"), .Text(":"), .Var(v("d"), raised: false)], priority: nil))
             let eqAB = parser.parse(css: "A = B")
-            XCTAssertEqual(eqAB, ConcreteSyntax(fragments: [.Var(v("A")), .Space, .Text("="), .Space, .Var(v("B"))], priority: nil))
+            XCTAssertEqual(eqAB, ConcreteSyntax(fragments: [.Var(v("A"), raised: false), .Space, .Text("="), .Space, .Var(v("B"), raised: false)], priority: nil))
         }
         
         func testTheory() {
@@ -92,10 +92,10 @@
             let TYPE_RPRIO : Float = 0.3
                         
             let theory = Theory()
-            theory.introduce("(eq. A B)", syntax: "A = B", priority: REL_PRIO)
+            theory.introduce("(eq. A B)", syntax: "^A = ^B", priority: REL_PRIO)
             
             theory.introduce("(abs x. T B[x])", syntax: "λ x : T. B", priority: BINDER_PRIO)
-            theory.introduce("(app. A B)", syntax: "A B", priority: APP_PRIO)
+            theory.introduce("(app. A B)", syntax: "A ^B", priority: APP_PRIO)
             theory.introduce("(in. A T)", syntax: "A : T", priority: REL_PRIO)
             
             theory.introduce("(all x. P[x])", syntax: "∀ x. P", priority: BINDER_PRIO)
@@ -112,6 +112,7 @@
             
             print(theory.pretty(theory.parse("Type~i → V")))
             print(theory.pretty(theory.parse("A B C")))
+            print(theory.pretty(theory.parse("A = B = C")))
 
         }
     }
