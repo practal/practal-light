@@ -145,10 +145,10 @@ public final class Theory {
                 }
                 guard binders.count == abstractSyntax.binders.count else { return false }
                 guard binders.count == Set(binders).count else { return false }
-                var boundVars = boundVars
-                boundVars.formUnion(binders)
                 guard params.count == abstractSyntax.params.count else { return false }
-                for p in params {
+                for (i, p) in params.enumerated() {
+                    var boundVars = boundVars
+                    boundVars.formUnion(abstractSyntax.selectBoundVars(param : i, binders : binders))
                     guard check(boundVars: boundVars, term: p) else { return false }
                 }
                 return true

@@ -63,6 +63,12 @@
             theory.introduce("abs x. T B[x]", syntax: "λ x : T. B")
             let lam = theory.parse("λ x : y. z")
             XCTAssertEqual(lam, e("abs x. y z"))
+            let f = theory.parse("λ x : x. u")
+            print("f = \(f)")
+            XCTAssertEqual(theory.checkWellformedness(f), [v("x") : 0, v("u") : 0])
+            let g = theory.parse("λ x : P[x]. u")
+            print("g = \(g)")
+            XCTAssertNil(theory.checkWellformedness(g))
         }
         
         func testPracticalTypes() {
