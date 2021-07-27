@@ -44,6 +44,45 @@ public final class Theory {
         }
         return terms.first!
     }
+    
+    public func pretty(_ expr : Term) -> String {
+        switch expr {
+        case .variable: return expr.description
+        case let .constant(const, binders: binders, params: params):
+            let binders = binders.map { v in v.description }
+            let ps : [String] = params.map { p in
+                let q = pretty(p)
+                if p.isConstant {
+                    return "(\(q))"
+                } else {
+                    return q
+                }
+            }
+            if let syntax = _constants[const], let concreteSyntax = syntax.concreteSyntaxes.first {
+                var result : String = ""
+                let abstractSyntax = syntax.abstractSyntax
+                for fragment in concreteSyntax.fragments {
+                    switch fragment {
+                    case .Space: result.append(" ")
+                    case let .Var(v):
+                        if let b = abstractSyntax.binderOf(v) {
+                            result.append(binders[b])
+                        } else if let p = abstractSyntax.paramOf(v) {
+                            result.append(ps[p])
+                        } else {
+                            fatalError()
+                        }
+                    case let .Text(t):
+                        result.append(t)
+                    }
+                }
+                return result
+            } else {
+                let prefix = ([const.description] + binders).joined(separator: " ")
+                return ([prefix + "."] + ps).joined(separator: " ")
+            }
+        }
+    }
         
     @discardableResult
     public func introduce(constant : Term) -> Const {

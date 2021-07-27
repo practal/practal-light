@@ -36,15 +36,15 @@
         func testCSS() {
             let parser = PractalExprParser()
             let css = parser.parse(css: " ∀ x : Type. B -->   ye:d ")
-            XCTAssertEqual(css, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x")), .Text(":"), .Space, .Var(v("Type")), .Text("."), .Space,
-                                                           .Var(v("B")), .Text("-->"), .Space, .Var(v("ye")), .Text(":"), .Var(v("d"))]))
+            XCTAssertEqual(css, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x")), .Space, .Text(":"), .Space, .Var(v("Type")), .Text("."), .Space,
+                                                           .Var(v("B")), .Space, .Text("-->"), .Space, .Var(v("ye")), .Text(":"), .Var(v("d"))]))
             let selected = css!.selectVars { x in x == v("x") || x == v("B") || x == v("d") }
             print("selected = \(selected)")
-            XCTAssertEqual(selected, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x")), .Text(":"), .Space, .Text("Type"), .Text("."), .Space,
-                                                                .Var(v("B")), .Text("-->"), .Space, .Text("ye"), .Text(":"), .Var(v("d"))]))
+            XCTAssertEqual(selected, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x")), .Space, .Text(":"), .Space, .Text("Type"), .Text("."), .Space,
+                                                                .Var(v("B")), .Space, .Text("-->"), .Space, .Text("ye"), .Text(":"), .Var(v("d"))]))
+            let eqAB = parser.parse(css: "A = B")
+            XCTAssertEqual(eqAB, ConcreteSyntax(fragments: [.Var(v("A")), .Space, .Text("="), .Space, .Var(v("B"))]))
         }
-        
-        
         
         func testTheory() {
             let parser = PractalExprParser()
@@ -58,5 +58,11 @@
             let t = theory.parse("u = (v = w)")
             print("t = \(t)")
             XCTAssertEqual(t, e("eq. u (eq. v w)"))
+            print("pretty = '\(theory.pretty(t))'")
+        }
+        
+        func testPracticalTypes() {
+            let theory = Theory()
+            
         }
     }

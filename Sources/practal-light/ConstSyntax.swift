@@ -32,45 +32,36 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
     }
     
     public var normalized : ConcreteSyntax {
-        var fs : [Fragment] = []
-        var discard_space = true
-        var text : String? = nil
-        
-        func closeText() {
-            if text != nil {
-                fs.append(.Text(text!))
-                text = nil
+                
+        func simp(_ a : Fragment, _ b : Fragment) -> Fragment? {
+            switch (a, b) {
+            case let (.Text(u), .Text(v)): return .Text(u + v)
+            case (.Space, .Space): return .Space
+            default: return nil
             }
         }
         
-        for f in fragments {
-            switch f {
-            case .Space where !discard_space:
-                closeText()
-                fs.append(.Space)
-                discard_space = true
-            case .Space where discard_space:
-                break
-            case .Text(let t) where text != nil:
-                discard_space = false
-                text!.append(t)
-            case .Text(let t) where text == nil:
-                discard_space = false
-                text = t
-            case .Var:
-                closeText()
-                fs.append(f)
-            default: fatalError("internal error")
+        guard var current = fragments.first else { return self }
+        var result : [Fragment] = []
+        for f in fragments.dropFirst() {
+            if let s = simp(current, f) {
+                current = s
+            } else {
+                result.append(current)
+                current = f
             }
         }
+        result.append(current)
         
-        closeText()
-        
-        while fs.last == .Space {
-            fs.removeLast()
+        if result.first == .Space {
+            result.removeFirst()
         }
         
-        return ConcreteSyntax(fragments: fs)
+        if result.last == .Space {
+            result.removeLast()
+        }
+
+        return ConcreteSyntax(fragments: result)
     }
     
     public func selectVars(_ select : (Var) -> Bool) -> ConcreteSyntax {
