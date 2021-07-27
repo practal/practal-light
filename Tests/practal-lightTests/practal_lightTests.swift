@@ -103,6 +103,8 @@
             theory.introduce("(imp. A B)", syntax: "A ⟶ B", priority: LOGIC_PRIO + IMP_RPRIO)
             theory.introduce("(false.)", syntax: "⊥")
             
+            theory.introduce("(Prop.)", syntax: "ℙ")
+            theory.introduce("(Nat.)", syntax: "ℕ")
             theory.introduce("(Fun. U V)", syntax: "U → V", priority: TYPE_PRIO + FUN_RPRIO)
             theory.introduce("(Pred x. T P[x])", syntax: "{ x : T | P }")
             theory.introduce("(Type. i)", syntax: "Type~i", priority: TYPE_PRIO + TYPE_RPRIO)
