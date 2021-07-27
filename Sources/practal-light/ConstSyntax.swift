@@ -15,9 +15,15 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
     }
 
     public let fragments : [Fragment]
+    public let priority : Float?
     
-    public init(fragments : [Fragment]) {
+    public init(fragments : [Fragment], priority : Float?) {
         self.fragments = fragments
+        self.priority = priority
+    }
+    
+    public func withPriority(_ priority : Float?) -> ConcreteSyntax {
+        return ConcreteSyntax(fragments: fragments, priority: priority)
     }
     
     public var description : String {
@@ -61,7 +67,7 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
             result.removeLast()
         }
 
-        return ConcreteSyntax(fragments: result)
+        return ConcreteSyntax(fragments: result, priority: priority)
     }
     
     public func selectVars(_ select : (Var) -> Bool) -> ConcreteSyntax {
@@ -71,7 +77,7 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
             case .Var(let v): if select(v) { return f } else { return .Text(v.description) }
             }
         }
-        return ConcreteSyntax(fragments: fs)
+        return ConcreteSyntax(fragments: fs, priority: priority)
     }
     
     public var vars : [Var] {

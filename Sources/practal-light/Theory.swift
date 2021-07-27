@@ -44,24 +44,27 @@ public final class Theory {
     public func parse(_ expr : String) -> Term {
         let terms = parseAll(expr)
         guard terms.count == 1 else {
+            if terms.count > 1 {
+                print("'\(expr)' cannot be parsed in a unique way:")
+                for (i, term) in terms.enumerated() {
+                    print("\(i+1). '\(pretty(term))'")
+                }
+            }
             fatalError("Could not parse '\(expr)'")
         }
         return terms.first!
     }
+    
+    /*private func fullyBracketed(_ expr : String) -> Bool {
+        return false
+    }*/
     
     public func pretty(_ expr : Term) -> String {
         switch expr {
         case .variable: return expr.description
         case let .constant(const, binders: binders, params: params):
             let binders = binders.map { v in v.description }
-            let ps : [String] = params.map { p in
-                let q = pretty(p)
-                if p.isConstant {
-                    return "(\(q))"
-                } else {
-                    return q
-                }
-            }
+            let ps : [String] = params.map { p in pretty(p) }
             if let syntax = _constants[const], let concreteSyntax = syntax.concreteSyntaxes.first {
                 var result : String = ""
                 let abstractSyntax = syntax.abstractSyntax
@@ -80,10 +83,10 @@ public final class Theory {
                         result.append(t)
                     }
                 }
-                return result
+                return "(" + result + ")"
             } else {
                 let prefix = ([const.description] + binders).joined(separator: " ")
-                return ([prefix + "."] + ps).joined(separator: " ")
+                return "(" + ([prefix + "."] + ps).joined(separator: " ") + ")"
             }
         }
     }
@@ -208,26 +211,26 @@ public final class Theory {
         invalidateParser()
     }
     
-    public func addSyntax(const : Const, syntax : String) {
+    public func addSyntax(const : Const, syntax : String, priority : Float? = nil) {
         guard let css = parser.parse(css: syntax) else {
             fatalError("Could not parse concrete syntax spec '\(syntax)'")
         }
-        addSyntax(const: const, concreteSyntax: css)
+        addSyntax(const: const, concreteSyntax: css.withPriority(priority))
     }
     
     @discardableResult
-    public func introduce(_ constant : String, syntax : String...) -> Const {
+    public func introduce(_ constant : String, syntax : String..., priority : Float? = nil) -> Const {
         let const = introduce(constant: parse(constant))
-        for s in syntax { addSyntax(const: const, syntax: s) }
+        for s in syntax { addSyntax(const: const, syntax: s, priority: priority) }
         return const
     }
     
     @discardableResult
-    public func define(_ constant : String, _ definition : String, syntax : String...) -> Const {
+    public func define(_ constant : String, _ definition : String, syntax : String..., priority : Float? = nil) -> Const {
         let lhs = parse(constant)
         let rhs = parse(definition)
         let const = define(constant: lhs, definition: rhs)
-        for s in syntax { addSyntax(const: const, syntax: s) }
+        for s in syntax { addSyntax(const: const, syntax: s, priority: priority) }
         return const
     }
         

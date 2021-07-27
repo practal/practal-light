@@ -59,15 +59,8 @@ extension Term : CustomStringConvertible {
             }
         case let .constant(c, binders: binders, params: params):
             let prefix = ([c.description] + binders.map { v in v.description }).joined(separator: " ")
-            let ps : [String] = params.map { p in
-                let q = p.description
-                if p.isConstant {
-                    return "(\(q))"
-                } else {
-                    return q
-                }
-            }
-            return ([prefix + "."] + ps).joined(separator: " ")
+            let ps : [String] = params.map { p in p.description }
+            return "(" + ([prefix + "."] + ps).joined(separator: " ") + ")"
         }
     }
 

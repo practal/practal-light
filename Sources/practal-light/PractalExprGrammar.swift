@@ -15,7 +15,8 @@ public class PractalExprGrammar : TextGrammar {
     
     @Sym var PractalExpr : N
     @Sym var _Expr : N
-    
+    @Sym var _AtomicExpr : N
+
     @Sym var ExprList : N
 
     @Sym var Variable : N
@@ -136,7 +137,7 @@ public class PractalExprGrammar : TextGrammar {
     public func addConstantRules() {
         add {
             ExprList.rule {
-                Seq(_Expr, RepeatGreedy(Seq(_OptSpace, _Expr)))
+                Seq(_AtomicExpr, RepeatGreedy(Seq(_OptSpace, _AtomicExpr)))
             }
             
             ExprList.rule { }
@@ -146,17 +147,74 @@ public class PractalExprGrammar : TextGrammar {
             }
                         
             Constant.rule {
+                const("(")
+                _OptSpace[0]
                 Const
                 VarList
                 const(".")
-                _OptSpace[0]
-                ExprList
                 _OptSpace[1]
+                ExprList
+                _OptSpace[2]
+                const(")")
             }
         }
     }
+    
+    public class Priorities {
+        
+        var prioExprs : [N] = []
+        var prioRanks : [Float : Int] = [:]
+        var topExpr : N
+        var atomicExpr : N
+        
+        init(constants : [Const : ConstSyntax], grammar : PractalExprGrammar) {
+            var prios : Set<Float> = []
+            for (_, syntax) in constants {
+                for cs in syntax.concreteSyntaxes {
+                    if let p = cs.priority {
+                        prios.insert(p)
+                    }
+                }
+            }
+            let priorities = Array(prios).sorted()
+            for (rank, p) in priorities.enumerated() {
+                prioRanks[p] = rank
+                prioExprs.append(grammar.nonterminal(SymbolName("_Expr-with-prio-\(rank)")))
+            }
+            topExpr = grammar._Expr
+            atomicExpr = grammar._AtomicExpr
+            var current = topExpr
+            for prioExpr in prioExprs + [atomicExpr] {
+                grammar.add {
+                    current.rule {
+                        prioExpr
+                    }
+                }
+                current = prioExpr
+            }
+        }
+        
+        var lowestNonAtomicExpr : N {
+            return prioExprs.last ?? topExpr
+        }
+        
+        func lookup(_ priority : Float?) -> (parent: N, child: N) {
+            guard let p = priority else { return (lowestNonAtomicExpr, topExpr) }
+            let rank = prioRanks[p]!
+            let E = prioExprs[rank]
+            return (E, E)
+        }
+        
+        func debug() {
+            print("There are \(prioExprs.count) intermittent priorities:")
+            for (i, e) in prioExprs.enumerated() {
+                print("\(i+1). \(e)")
+            }
+        }
+        
+    }
 
-    public func constConcreteRuleBody(abstractSyntax : AbstractSyntax, concreteSyntax : ConcreteSyntax) -> RuleBody {
+    func constConcreteRuleBody(abstractSyntax : AbstractSyntax, concreteSyntax : ConcreteSyntax, E : N) -> RuleBody {
         var elems : [RuleBody] = []
         var i = 0
         var first : Bool = true
@@ -181,7 +239,7 @@ public class PractalExprGrammar : TextGrammar {
                 if abstractSyntax.binders.contains(v) {
                     elems.append(Var[i])
                 } else {
-                    elems.append(_Expr[i])
+                    elems.append(E[i])
                 }
             }
             i += 1
@@ -191,25 +249,27 @@ public class PractalExprGrammar : TextGrammar {
     
     public let CONST_CONCRETE_PREFIX = "const-concrete-"
 
-    public func addConstSyntaxRules(const : Const, syntax : ConstSyntax) {
+    public func addConstSyntaxRules(const : Const, syntax : ConstSyntax, priorities : Priorities) {
         guard let syntax = constants[const] else { return }
         for i in 0 ..< syntax.concreteSyntaxes.count {
             let concrete_const = nonterminal(SymbolName("\(CONST_CONCRETE_PREFIX)\(i)-\(const.id)"))
             let concreteSyntax = syntax.concreteSyntaxes[i]
+            let E = priorities.lookup(concreteSyntax.priority)
             add {
-                _Expr.rule {
+                E.parent.rule {
                     concrete_const
                 }
                 concrete_const.rule {
-                    constConcreteRuleBody(abstractSyntax: syntax.abstractSyntax, concreteSyntax: concreteSyntax)
+                    constConcreteRuleBody(abstractSyntax: syntax.abstractSyntax, concreteSyntax: concreteSyntax, E: E.child)
                 }
             }
         }
     }
-
+    
     public func addConcreteSyntaxRules() {
+        let priorities = Priorities(constants: constants, grammar: self)
         for (const, syntax) in constants {
-            addConstSyntaxRules(const: const, syntax: syntax)
+            addConstSyntaxRules(const: const, syntax: syntax, priorities: priorities)
         }
     }
     
@@ -253,15 +313,15 @@ public class PractalExprGrammar : TextGrammar {
                 _Expr
             }
             
-            _Expr.rule {
+            _AtomicExpr.rule {
                 Variable
             }
             
-            _Expr.rule {
+            _AtomicExpr.rule {
                 Constant
             }
             
-            _Expr.rule {
+            _AtomicExpr.rule {
                 const("(")
                 _OptSpace[0]
                 _Expr[1]
@@ -272,3 +332,5 @@ public class PractalExprGrammar : TextGrammar {
     }
 
 }
+
+
