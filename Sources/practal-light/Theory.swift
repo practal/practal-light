@@ -47,7 +47,7 @@ public final class Theory {
             if terms.count > 1 {
                 print("'\(expr)' cannot be parsed in a unique way:")
                 for (i, term) in terms.enumerated() {
-                    print("\(i+1). '\(pretty(term))'")
+                    print("\(i+1). '\(pretty(term))', raw: '\(term)'")
                 }
             }
             fatalError("Could not parse '\(expr)'")

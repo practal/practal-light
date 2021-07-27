@@ -193,13 +193,9 @@ public class PractalExprGrammar : TextGrammar {
                 current = prioExpr
             }
         }
-        
-        var lowestNonAtomicExpr : N {
-            return prioExprs.last ?? topExpr
-        }
-        
+                
         func lookup(_ priority : Float?) -> (parent: N, child: N) {
-            guard let p = priority else { return (lowestNonAtomicExpr, topExpr) }
+            guard let p = priority else { return (atomicExpr, topExpr) }
             let rank = prioRanks[p]!
             let E = prioExprs[rank]
             return (E, E)
