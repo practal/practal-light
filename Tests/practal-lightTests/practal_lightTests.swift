@@ -128,8 +128,7 @@
             theory.define("(ex x. P[x])", "¬(∀ x. ¬P[x])", syntax: "∃ x. `P", priority: BINDER_PRIO)
             theory.define("(all-in x. T P[x])", "∀ x. x : T ⟶ P[x]", syntax: "∀ x : T. `P", priority: BINDER_PRIO)
             theory.define("(ex-in x. T P[x])", "∃ x. x : T ∧ P[x]", syntax: "∃ x : T. `P", priority: BINDER_PRIO)
-            //theory.define("(sub-type. U V)")
-            //theory.define("(.neq A B)", "", syntax: "A ≠ B")
+            theory.define("(sub-type. U V)", "∀ u : U. u : V", syntax: "U ⊆ V", priority: REL_PRIO)
             
         }
     }
