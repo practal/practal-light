@@ -129,6 +129,7 @@
             
             // Theory Development
             
+                        
             introduce("(eq. A B)", syntax: "A = B", priority: REL_PRIO)
             
             introduce("(abs x. T B[x])", syntax: "λ x : T. `B", priority: BINDER_PRIO)
