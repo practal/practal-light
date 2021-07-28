@@ -168,8 +168,11 @@
             show("(∅ → B) = (∅ → ∅)")
             
             define("(Nil.)", "∅ → ∅", syntax: "Nil")
+            define("(nil.)", "λ x : ∅. ⊥", syntax: "nil")
             
-            show("Nil")
+            axiom("f : A → B ⟶ ¬ (x : A) ⟶ f x = nil")
+            
+            //show("Nil")
             
         }
     }
