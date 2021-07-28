@@ -55,12 +55,35 @@ public final class Theory {
         return terms.first!
     }
         
+    // quick workaround for now to avoid excessive brackets
+    private func needsBrackets(_ s : String) -> Bool {
+        if !s.contains(" ") { return false }
+        guard s.starts(with: "(") else { return true }
+        var opened = 1
+        for c in s.dropFirst() {
+            guard opened > 0 else { return true }
+            if c == "(" {
+                opened += 1
+            } else if c == ")" {
+                opened -= 1
+            }
+        }
+        return false
+    }
+    
     public func pretty(_ expr : Term) -> String {
         switch expr {
         case .variable: return expr.description
         case let .constant(const, binders: binders, params: params):
             let binders = binders.map { v in v.description }
-            let ps : [String] = params.map { p in pretty(p) }
+            let ps : [String] = params.map { p in
+                let s = pretty(p)
+                if needsBrackets(s) {
+                    return "(\(s))"
+                } else {
+                    return s
+                }
+            }
             if let syntax = _constants[const], let concreteSyntax = syntax.concreteSyntaxes.first {
                 var result : String = ""
                 let abstractSyntax = syntax.abstractSyntax
@@ -79,7 +102,7 @@ public final class Theory {
                         result.append(t)
                     }
                 }
-                return "(" + result + ")"
+                return result
             } else {
                 let prefix = ([const.description] + binders).joined(separator: " ")
                 return "(" + ([prefix + "."] + ps).joined(separator: " ") + ")"
