@@ -127,12 +127,12 @@ public final class Theory {
             for param in params {
                 switch param {
                 case .constant: error("parameters must be variables")
-                case let .variable(v, dependencies: deps):
+                case let .variable(v, params: deps):
                     guard !binderVars.contains(v) else { error("parameter '\(v)' is already a binder") }
                     guard !paramVars.contains(v) else { error("duplicate parameter variable '\(v)'") }
                     guard deps.count == Set(deps).count else { error("duplicate dependencies") }
                     for dep in deps {
-                        guard binderVars.contains(dep) else { error("dependency '\(dep)' is not a binder")}
+                        guard let d = dep.boundVar, binderVars.contains(d) else { error("dependency '\(dep)' is not a binder")}
                     }
                     paramVars.insert(v)
                 }
@@ -149,18 +149,17 @@ public final class Theory {
         var freeVars : [Var : Int] = [:]
         func check(boundVars : Set<Var>, term : Term) -> Bool {
             switch term {
-            case let .variable(v, dependencies: deps):
+            case let .variable(v, params: params):
                 guard !boundVars.contains(v) else {
-                    return deps.isEmpty
+                    return params.isEmpty
                 }
-                guard deps.count == Set(deps).count else { return false }
-                for d in deps {
-                    guard boundVars.contains(d) else { return false }
+                for p in params {
+                    guard check(boundVars: boundVars, term: p) else { return false }
                 }
                 if let arity = freeVars[v] {
-                    return arity == deps.count
+                    return arity == params.count
                 } else {
-                    freeVars[v] = deps.count
+                    freeVars[v] = params.count
                 }
                 return true
             case let .constant(const, binders: binders, params: params):

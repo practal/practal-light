@@ -103,7 +103,7 @@ public class PractalExprGrammar : TextGrammar {
             Variable.rule {
                 Var
                 const("[")
-                VarList
+                ExprList
                 const("]")
             }
 

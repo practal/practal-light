@@ -148,8 +148,11 @@ public struct AbstractSyntax : Hashable {
     public func selectBoundVars(param : Int, binders _binders : [Var]) -> [Var] {
         var vars : [Var] = []
         switch params[param] {
-        case let .variable(_, dependencies: deps):
-            for d in deps {
+        case let .variable(_, params: params):
+            for p in params {
+                guard let d = p.boundVar else {
+                    fatalError()
+                }
                 let i = binderOf(d)!
                 vars.append(_binders[i])
             }

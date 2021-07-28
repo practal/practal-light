@@ -10,7 +10,7 @@ public typealias Var = Id
 public typealias Const = Id
 
 public enum Term : Hashable {
-    case variable(Var, dependencies: [Var])
+    case variable(Var, params: [Term])
     case constant(Const, binders: [Var], params: [Term])
 }
 
@@ -32,8 +32,15 @@ extension Term {
     
     public var `var` : Var? {
         switch self {
-        case let .variable(v, dependencies: _): return v
+        case let .variable(v, params: _): return v
         case .constant: return nil
+        }
+    }
+    
+    public var `boundVar` : Var? {
+        switch self {
+        case let .variable(v, params: []): return v
+        default: return nil
         }
     }
     
@@ -50,12 +57,12 @@ extension Term : CustomStringConvertible {
     
     public var description: String {
         switch self {
-        case let .variable(v, dependencies: deps):
-            if deps.isEmpty {
+        case let .variable(v, params: params):
+            if params.isEmpty {
                 return v.description
             } else {
-                let names = deps.map { v in v.description }
-                return "\(v)[\(names.joined(separator: ", "))]"
+                let ps = params.map { v in v.description }
+                return "\(v)[\(ps.joined(separator: ", "))]"
             }
         case let .constant(c, binders: binders, params: params):
             let prefix = ([c.description] + binders.map { v in v.description }).joined(separator: " ")

@@ -144,11 +144,11 @@ public class PractalExprParser {
         func conv(_ syntaxTree : SyntaxTree) -> Term {
             switch (syntaxTree.symbol, syntaxTree.children.count) {
             case (PRACTAL_EXPR, 1): return conv(syntaxTree.children[0])
-            case (VARIABLE, 1): return .variable(varOf(syntaxTree[0]), dependencies: [])
+            case (VARIABLE, 1): return .variable(varOf(syntaxTree[0]), params: [])
             case (VARIABLE, 2):
                 let v = varOf(syntaxTree[0])
-                let deps = varListOf(syntaxTree[1])
-                return .variable(v, dependencies: deps)
+                let params = exprListOf(syntaxTree[1])
+                return .variable(v, params: params)
             case (CONSTANT, 3):
                 let c = constOf(syntaxTree[0])
                 let binders = varListOf(syntaxTree[1])
