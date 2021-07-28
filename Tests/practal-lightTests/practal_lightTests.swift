@@ -110,25 +110,18 @@
             theory.introduce("(Type. i)", syntax: "Type~i", priority: TYPE_PRIO + TYPE_RPRIO)
             theory.introduce("(Union i. I T[i])", syntax: "⋃ i : I. `T", priority: TYPE_PRIO + UNION_RPRIO)
             
+            // Mock functions for simulating theory development
             func show(_ expr : String) {
                 let t = theory.parse(expr)
-                print(theory.pretty(t))
+                XCTAssertNotNil(theory.checkWellformedness(t))
+                print("wellformed: \(theory.pretty(t))")
             }
             
-            XCTAssertEqual(theory.parse("Type~i → V"), theory.parse("(Type~i) → V"))
-            XCTAssertEqual(theory.parse("A B C"), theory.parse("(A B) C"))
-            XCTAssertTrue(theory.parseAll("A = B = C").isEmpty)
-            
-            theory.define("(not. P)", "P ⟶ ⊥", syntax: "¬`P", priority: LOGIC_PRIO + NOT_RPRIO)
-            theory.define("(true.)", "¬ ⊥", syntax: "⊤")
-            theory.define("(or. P Q)", "¬P ⟶ Q", syntax: "`P ∨ Q", priority: LOGIC_PRIO + OR_RPRIO)
-            theory.define("(and. P Q)", "¬(¬P ∨ ¬Q)", syntax: "`P ∧ Q", priority: LOGIC_PRIO + AND_RPRIO)
-            theory.define("(equiv. P Q)", "(P ⟶ Q) ∧ (Q ⟶ P)", syntax: "P ≡ Q", priority: REL_PRIO)
-            theory.define("(neq. P Q)", "¬(P = Q)", syntax: "P ≠ Q", priority: REL_PRIO)
-            theory.define("(ex x. P[x])", "¬(∀ x. ¬P[x])", syntax: "∃ x. `P", priority: BINDER_PRIO)
-            theory.define("(all-in x. T P[x])", "∀ x. x : T ⟶ P[x]", syntax: "∀ x : T. `P", priority: BINDER_PRIO)
-            theory.define("(ex-in x. T P[x])", "∃ x. x : T ∧ P[x]", syntax: "∃ x : T. `P", priority: BINDER_PRIO)
-            theory.define("(sub-type. U V)", "∀ u : U. u : V", syntax: "U ⊆ V", priority: REL_PRIO)
+            func theorem(_ expr : String) {
+                let t = theory.parse(expr)
+                XCTAssertNotNil(theory.checkWellformedness(t))
+                print("theorem: \(theory.pretty(t))")
+            }
             
             func axiom(_ expr : String) {
                 let t = theory.parse(expr)
@@ -136,6 +129,29 @@
                 print("axiom: ⊢ \(theory.pretty(t))")
             }
             
+            func define(_ abstractSyntax : String, _ definition : String, syntax : String, priority : Float? = nil) {
+                let const = theory.define(abstractSyntax, definition, syntax: syntax, priority: priority)
+                let t = theory.parse(abstractSyntax)
+                print("\(const): ⊢ \(theory.pretty(t)) ≝ \(definition)")
+            }
+            
+            XCTAssertEqual(theory.parse("Type~i → V"), theory.parse("(Type~i) → V"))
+            XCTAssertEqual(theory.parse("A B C"), theory.parse("(A B) C"))
+            XCTAssertTrue(theory.parseAll("A = B = C").isEmpty)
+            
+            // Theory Development
+            
+            define("(not. P)", "P ⟶ ⊥", syntax: "¬`P", priority: LOGIC_PRIO + NOT_RPRIO)
+            define("(true.)", "¬ ⊥", syntax: "⊤")
+            define("(or. P Q)", "¬P ⟶ Q", syntax: "`P ∨ Q", priority: LOGIC_PRIO + OR_RPRIO)
+            define("(and. P Q)", "¬(¬P ∨ ¬Q)", syntax: "`P ∧ Q", priority: LOGIC_PRIO + AND_RPRIO)
+            define("(equiv. P Q)", "(P ⟶ Q) ∧ (Q ⟶ P)", syntax: "P ≡ Q", priority: REL_PRIO)
+            define("(neq. P Q)", "¬(P = Q)", syntax: "P ≠ Q", priority: REL_PRIO)
+            define("(ex x. P[x])", "¬(∀ x. ¬P[x])", syntax: "∃ x. `P", priority: BINDER_PRIO)
+            define("(all-in x. T P[x])", "∀ x. x : T ⟶ P[x]", syntax: "∀ x : T. `P", priority: BINDER_PRIO)
+            define("(ex-in x. T P[x])", "∃ x. x : T ∧ P[x]", syntax: "∃ x : T. `P", priority: BINDER_PRIO)
+            define("(sub-type. U V)", "∀ u : U. u : V", syntax: "U ⊆ V", priority: REL_PRIO)
+                        
             axiom("a = a")
             axiom("(a = b) : ℙ")
             axiom("∀ p : ℙ. p = ⊥ ∨ p = ⊤")
@@ -143,7 +159,17 @@
             
             theory.define("(Empty.)", "{ p : ℙ | ⊥ }", syntax: "∅")
             
+            axiom("f : A → B ⟶ (∀ a : A. f x : B)")
+            axiom("∀ f : A → B. ∀ g : C → D. (f = g) = (A = C ∧ (∀ x : A. f x = g x))")
+            theorem("(A → B ⊆ C → D) = (A = C ∧ (A = ∅ ∨ B ⊆ D))")
             
-        
+            show("A ≠ ∅")
+            show("(A → ∅) = ∅")
+            show("(∅ → B) = (∅ → ∅)")
+            
+            define("(Nil.)", "∅ → ∅", syntax: "Nil")
+            
+            show("Nil")
+            
         }
     }
