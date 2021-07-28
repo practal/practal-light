@@ -229,6 +229,14 @@ public class PractalExprGrammar : TextGrammar {
                 }
                 first = false
                 elems.append(const(syntax))
+            case .Keyword(let keyword):
+                if !first {
+                    elems.append(_OptSpace[i])
+                }
+                first = false
+                let k = const(keyword)
+                let _ = prioritise(terminal: k, over: Var)
+                elems.append(k)
             case let .Var(v, raised: raised):
                 if !first {
                     elems.append(_OptSpace[i])

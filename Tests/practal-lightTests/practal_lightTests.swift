@@ -39,8 +39,8 @@
                                                            .Var(v("B"), raised: true), .Space, .Text("-->"), .Space, .Var(v("ye"), raised: true), .Text(":"), .Var(v("d"), raised: true)], priority: nil))
             let selected = css!.selectVars { x in x == v("x") || x == v("B") || x == v("d") }
             print("selected = \(selected)")
-            XCTAssertEqual(selected, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x"), raised: true), .Space, .Text(":"), .Space, .Text("Type"), .Text("."), .Space,
-                                                                .Var(v("B"), raised: true), .Space, .Text("-->"), .Space, .Text("ye"), .Text(":"), .Var(v("d"), raised: true)], priority: nil))
+            XCTAssertEqual(selected, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x"), raised: true), .Space, .Text(":"), .Space, .Keyword("Type"), .Text("."), .Space,
+                                                                .Var(v("B"), raised: true), .Space, .Text("-->"), .Space, .Keyword("ye"), .Text(":"), .Var(v("d"), raised: true)], priority: nil))
             let eqAB = parser.parse(css: "A = B")
             XCTAssertEqual(eqAB, ConcreteSyntax(fragments: [.Var(v("A"), raised: true), .Space, .Text("="), .Space, .Var(v("B"), raised: true)], priority: nil))
         }

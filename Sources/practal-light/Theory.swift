@@ -100,6 +100,8 @@ public final class Theory {
                         }
                     case let .Text(t):
                         result.append(t)
+                    case let .Keyword(t):
+                        result.append(t)
                     }
                 }
                 return result

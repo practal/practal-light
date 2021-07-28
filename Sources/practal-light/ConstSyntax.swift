@@ -12,6 +12,7 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
         case Var(Var, raised: Bool)  // the raised vars get the next higher priority class
         case Space
         case Text(String)
+        case Keyword(String)
     }
 
     public let fragments : [Fragment]
@@ -32,6 +33,7 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
             case .Space: return "␣"
             case let .Var(v, raised: raised): if raised { return "\(v)" } else { return "`\(v)" }
             case .Text(let t): return "'\(t)'"
+            case .Keyword(let t): return "@'\(t)'"
             }
         }
         return frags.joined()
@@ -73,8 +75,8 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
     public func selectVars(_ select : (Var) -> Bool) -> ConcreteSyntax {
         let fs : [Fragment] = fragments.map { f in
             switch f {
-            case .Space, .Text: return f
-            case let .Var(v, _): if select(v) { return f } else { return .Text(v.description) }
+            case .Space, .Text, .Keyword: return f
+            case let .Var(v, _): if select(v) { return f } else { return .Keyword(v.description) }
             }
         }
         return ConcreteSyntax(fragments: fs, priority: priority)
@@ -85,7 +87,7 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
         for f in fragments {
             switch f {
             case let .Var(v, _): vs.append(v)
-            case .Space, .Text: break
+            case .Space, .Text, .Keyword: break
             }
         }
         return vs
