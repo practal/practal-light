@@ -193,6 +193,8 @@
             show("{ a : A | P a }")
             
             axiom("(a : { a : A | P a }) = (a : A ∧ P a)")
+            
+            show("{ T : Type i | ¬(T : T) }")
 
         }
     }
