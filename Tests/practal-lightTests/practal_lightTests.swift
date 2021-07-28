@@ -107,7 +107,7 @@
             theory.introduce("(Nat.)", syntax: "ℕ")
             theory.introduce("(Fun. U V)", syntax: "U → `V", priority: TYPE_PRIO + FUN_RPRIO)
             theory.introduce("(Pred x. T P[x])", syntax: "{ x : T | P }")
-            theory.introduce("(Type. i)", syntax: "Type~i", priority: TYPE_PRIO + TYPE_RPRIO)
+            theory.introduce("(Type. i)", syntax: "Type i", priority: TYPE_PRIO + TYPE_RPRIO)
             theory.introduce("(Union i. I T[i])", syntax: "⋃ i : I. `T", priority: TYPE_PRIO + UNION_RPRIO)
             
             // Mock functions for simulating theory development
@@ -135,7 +135,7 @@
                 print("\(const): ⊢ \(theory.pretty(t)) ≝ \(definition)")
             }
             
-            XCTAssertEqual(theory.parse("Type~i → V"), theory.parse("(Type~i) → V"))
+            XCTAssertEqual(theory.parse("Type i → V"), theory.parse("(Type i) → V"))
             XCTAssertEqual(theory.parse("A B C"), theory.parse("(A B) C"))
             XCTAssertTrue(theory.parseAll("A = B = C").isEmpty)
             
