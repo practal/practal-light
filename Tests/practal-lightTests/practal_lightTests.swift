@@ -148,7 +148,7 @@
 
             introduce("(Nat.)", syntax: "ℕ")
             introduce("(Nat-zero.)", syntax: "0")
-            introduce("(Nat-succ. n)", syntax: "succ n", priority: APP_PRIO)
+            introduce("(Nat-succ. n)", syntax: "succ `n", priority: APP_PRIO)
 
             XCTAssertEqual(theory.parse("Type i → V"), theory.parse("(Type i) → V"))
             XCTAssertEqual(theory.parse("A B C"), theory.parse("(A B) C"))
@@ -209,7 +209,12 @@
             
             show("{ T : Type i | ¬(T : T) }")
             
-            //axiom("{")
+            show("succ succ n")
+            show("Type Type i")
+            show("Type succ 0")
+            show("f succ 0")
+            
+            
 
         }
     }
