@@ -189,6 +189,10 @@
             define("(undefined. x)", "x = nil", syntax: "x↑", priority: REL_PRIO)
             define("(defined-eq. x y)", "(x↓ ∨ y↓) ∧ x = y", syntax: "x =↓ y", priority: REL_PRIO)
             define("(undefined-eq. x y)", "x↑ ∨ y↑ ∨ x = y", syntax: "x =↑ y", priority: REL_PRIO)
+            
+            show("{ a : A | P a }")
+            
+            axiom("(a : { a : A | P a }) = (a : A ∧ P a)")
 
         }
     }
