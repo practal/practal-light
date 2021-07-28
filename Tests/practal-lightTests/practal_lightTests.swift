@@ -79,8 +79,9 @@
             let BINDER_PRIO : Float = 10
             let LOGIC_PRIO : Float = 20
             let REL_PRIO : Float = 30
-            let TYPE_PRIO : Float = 35
-            let APP_PRIO : Float = 40
+            let TYPE_PRIO : Float = 40
+            //let ARITH_PRIO : Float = 50
+            let APP_PRIO : Float = 60
             
             let IMP_RPRIO : Float = 0.1
             let OR_RPRIO : Float = 0.2
@@ -92,29 +93,20 @@
             let TYPE_RPRIO : Float = 0.3
                         
             let theory = Theory()
-            theory.introduce("(eq. A B)", syntax: "A = B", priority: REL_PRIO)
-            
-            theory.introduce("(abs x. T B[x])", syntax: "λ x : T. `B", priority: BINDER_PRIO)
-            theory.introduce("(app. A B)", syntax: "`A B", priority: APP_PRIO)
-            theory.introduce("(in. A T)", syntax: "A : T", priority: REL_PRIO)
-            
-            theory.introduce("(all x. P[x])", syntax: "∀ x. `P", priority: BINDER_PRIO)
-            theory.introduce("(choose x. T P[x])", syntax: "ε x : T. `P", priority: BINDER_PRIO)
-            theory.introduce("(imp. A B)", syntax: "A ⟶ `B", priority: LOGIC_PRIO + IMP_RPRIO)
-            theory.introduce("(false.)", syntax: "⊥")
-            
-            theory.introduce("(Prop.)", syntax: "ℙ")
-            theory.introduce("(Nat.)", syntax: "ℕ")
-            theory.introduce("(Fun. U V)", syntax: "U → `V", priority: TYPE_PRIO + FUN_RPRIO)
-            theory.introduce("(Pred x. T P[x])", syntax: "{ x : T | P }")
-            theory.introduce("(Type. i)", syntax: "Type i", priority: TYPE_PRIO + TYPE_RPRIO)
-            theory.introduce("(Union i. I T[i])", syntax: "⋃ i : I. `T", priority: TYPE_PRIO + UNION_RPRIO)
             
             // Mock functions for simulating theory development
+            
             func show(_ expr : String) {
                 let t = theory.parse(expr)
                 XCTAssertNotNil(theory.checkWellformedness(t))
                 print("pretty: \(theory.pretty(t)), raw: \(t)")
+            }
+            
+            func introduce(_ expr : String, syntax : String, priority : Float? = nil) {
+                theory.introduce(expr, syntax: syntax, priority: priority)
+                let t = theory.parse(expr)
+                XCTAssertNotNil(theory.checkWellformedness(t))
+                print("introduce: \(theory.pretty(t))")
             }
             
             func theorem(_ expr : String) {
@@ -135,12 +127,33 @@
                 print("\(const): ⊢ \(theory.pretty(t)) ≝ \(definition)")
             }
             
+            // Theory Development
+            
+            introduce("(eq. A B)", syntax: "A = B", priority: REL_PRIO)
+            
+            introduce("(abs x. T B[x])", syntax: "λ x : T. `B", priority: BINDER_PRIO)
+            introduce("(app. A B)", syntax: "`A B", priority: APP_PRIO)
+            introduce("(in. A T)", syntax: "A : T", priority: REL_PRIO)
+            
+            introduce("(all x. P[x])", syntax: "∀ x. `P", priority: BINDER_PRIO)
+            introduce("(choose x. T P[x])", syntax: "ε x : T. `P", priority: BINDER_PRIO)
+            introduce("(imp. A B)", syntax: "A ⟶ `B", priority: LOGIC_PRIO + IMP_RPRIO)
+            introduce("(false.)", syntax: "⊥")
+            
+            introduce("(Prop.)", syntax: "ℙ")
+            introduce("(Fun. U V)", syntax: "U → `V", priority: TYPE_PRIO + FUN_RPRIO)
+            introduce("(Pred x. T P[x])", syntax: "{ x : T | P }")
+            introduce("(Type. i)", syntax: "Type i", priority: TYPE_PRIO + TYPE_RPRIO)
+            introduce("(Union i. I T[i])", syntax: "⋃ i : I. `T", priority: TYPE_PRIO + UNION_RPRIO)
+
+            introduce("(Nat.)", syntax: "ℕ")
+            introduce("(Nat-zero.)", syntax: "0")
+            introduce("(Nat-succ. n)", syntax: "succ n", priority: APP_PRIO)
+
             XCTAssertEqual(theory.parse("Type i → V"), theory.parse("(Type i) → V"))
             XCTAssertEqual(theory.parse("A B C"), theory.parse("(A B) C"))
             XCTAssertTrue(theory.parseAll("A = B = C").isEmpty)
-            
-            // Theory Development
-            
+
             define("(not. P)", "P ⟶ ⊥", syntax: "¬`P", priority: LOGIC_PRIO + NOT_RPRIO)
             define("(true.)", "¬ ⊥", syntax: "⊤")
             define("(or. P Q)", "¬P ⟶ Q", syntax: "`P ∨ Q", priority: LOGIC_PRIO + OR_RPRIO)
@@ -195,6 +208,8 @@
             axiom("(a : { a : A | P a }) = (a : A ∧ P a)")
             
             show("{ T : Type i | ¬(T : T) }")
+            
+            //axiom("{")
 
         }
     }
