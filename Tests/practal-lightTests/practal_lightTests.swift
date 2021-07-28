@@ -157,7 +157,7 @@
             axiom("∀ p : ℙ. p = ⊥ ∨ p = ⊤")
             axiom("⊤ ≠ ⊥")
             
-            theory.define("(Empty.)", "{ p : ℙ | ⊥ }", syntax: "∅")
+            define("(Empty.)", "{ p : ℙ | ⊥ }", syntax: "∅")
             
             axiom("f : A → B ⟶ (∀ a : A. f x : B)")
             axiom("∀ f : A → B. ∀ g : C → D. (f = g) = (A = C ∧ (∀ x : A. f x = g x))")
@@ -170,9 +170,8 @@
             define("(Nil.)", "∅ → ∅", syntax: "Nil")
             define("(nil.)", "λ x : ∅. ⊥", syntax: "nil")
             
+            show("nil")
+            
             axiom("f : A → B ⟶ ¬ (x : A) ⟶ f x = nil")
-            
-            //show("Nil")
-            
         }
     }

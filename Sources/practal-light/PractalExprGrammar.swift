@@ -235,7 +235,9 @@ public class PractalExprGrammar : TextGrammar {
                 }
                 first = false
                 let k = const(keyword)
-                let _ = prioritise(terminal: k, over: Var)
+                add {
+                    prioritise(terminal: k, over: Var)
+                }
                 elems.append(k)
             case let .Var(v, raised: raised):
                 if !first {
