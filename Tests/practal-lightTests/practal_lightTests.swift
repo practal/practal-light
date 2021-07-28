@@ -193,7 +193,7 @@
             show("f : Fun")
             
             define("(all-fun f. P[f])", "∀ f. f : Fun ⟶ P[f]", syntax: "∀ f : Fun. `P", priority: BINDER_PRIO)
-            define("(ex-fun f. P[f])", "∃ f. f : Fun ⟶ P[f]", syntax: "∃ f : Fun. `P", priority: BINDER_PRIO)
+            define("(ex-fun f. P[f])", "∃ f. f : Fun ∧ P[f]", syntax: "∃ f : Fun. `P", priority: BINDER_PRIO)
             
             axiom("¬(A : Fun) ⟶ A B = nil")
             
@@ -229,5 +229,11 @@
             axiom("i : ℕ ⟶ Type i : Type (succ i)")
             axiom("i : ℕ ⟶ Type i ⊆ Type (succ i)")
             
+            define("(is-Type. T)", "∃ i. T : Type i", syntax: "T : Type", priority: REL_PRIO)
+            
+            show("t : Type")
+            
+            define("(all-type T. P[T])", "∀ T. T : Type ⟶ P[T]", syntax: "∀ T : Type. `P", priority: BINDER_PRIO)
+            define("(ex-type T. P[T])", "∃ T. T : Type ∧ P[T]", syntax: "∃ T : Type. `P", priority: BINDER_PRIO)
         }
     }
