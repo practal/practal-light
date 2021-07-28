@@ -148,7 +148,7 @@
 
             introduce("(Nat.)", syntax: "ℕ")
             introduce("(Nat-zero.)", syntax: "0")
-            introduce("(Nat-succ. n)", syntax: "succ `n", priority: APP_PRIO)
+            introduce("(Nat-succ.)", syntax: "succ")
 
             XCTAssertEqual(theory.parse("Type i → V"), theory.parse("(Type i) → V"))
             XCTAssertEqual(theory.parse("A B C"), theory.parse("(A B) C"))
@@ -214,7 +214,11 @@
             show("Type succ 0")
             show("f succ 0")
             
+            axiom("0 : ℕ")
+            axiom("succ : ℕ → ℕ")
+            axiom("succ n ≠ 0")
+            axiom("succ(m) =↓ succ(n) ⟶ m = n")
+            axiom("0 : N ⟶ (∀ n : N. succ n : N) ⟶ ℕ ⊆ N")
             
-
         }
     }
