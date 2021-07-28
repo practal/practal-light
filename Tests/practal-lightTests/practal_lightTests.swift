@@ -173,5 +173,13 @@
             show("nil")
             
             axiom("f : A → B ⟶ ¬ (x : A) ⟶ f x = nil")
+            
+            define("(is-Fun. f)", "∃ U. ∃ V. f : U → V", syntax: "f : Fun", priority: REL_PRIO)
+            
+            show("f : Fun")
+            
+            define("(all-fun f. P[f])", "∀ f. f : Fun ⟶ P[f]", syntax: "∀ f : Fun. `P", priority: BINDER_PRIO)
+            define("(ex-fun f. P[f])", "∃ f. f : Fun ⟶ P[f]", syntax: "∃ f : Fun. `P", priority: BINDER_PRIO)
+
         }
     }
