@@ -114,7 +114,7 @@
             func show(_ expr : String) {
                 let t = theory.parse(expr)
                 XCTAssertNotNil(theory.checkWellformedness(t))
-                print("wellformed: \(theory.pretty(t))")
+                print("pretty: \(theory.pretty(t)), raw: \(t)")
             }
             
             func theorem(_ expr : String) {
@@ -180,6 +180,15 @@
             
             define("(all-fun f. P[f])", "∀ f. f : Fun ⟶ P[f]", syntax: "∀ f : Fun. `P", priority: BINDER_PRIO)
             define("(ex-fun f. P[f])", "∃ f. f : Fun ⟶ P[f]", syntax: "∃ f : Fun. `P", priority: BINDER_PRIO)
+            
+            axiom("¬(A : Fun) ⟶ A B = nil")
+            
+            show("¬(A : Fun) ⟶ A B = nil")
+            
+            define("(defined. x)", "x ≠ nil", syntax: "x↓", priority: REL_PRIO)
+            define("(undefined. x)", "x = nil", syntax: "x↑", priority: REL_PRIO)
+            define("(defined-eq. x y)", "(x↓ ∨ y↓) ∧ x = y", syntax: "x =↓ y", priority: REL_PRIO)
+            define("(undefined-eq. x y)", "x↑ ∨ y↑ ∨ x = y", syntax: "x =↑ y", priority: REL_PRIO)
 
         }
     }
