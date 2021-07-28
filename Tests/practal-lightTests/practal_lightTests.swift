@@ -220,5 +220,13 @@
             axiom("succ(m) =↓ succ(n) ⟶ m = n")
             axiom("0 : N ⟶ (∀ n : N. succ n : N) ⟶ ℕ ⊆ N")
             
+            define("(Type-0.)", "Type 0", syntax: "𝕋")
+            axiom("ℙ : 𝕋")
+            axiom("ℕ : 𝕋")
+            axiom("A : Type i ⟶ B : Type i ⟶ A → B : Type i")
+            axiom("A : Type i ⟶ P : A → ℙ ⟶ { a : A | P a } : Type i")
+            axiom("i : ℕ ⟶ Type i : Type (succ i)")
+            axiom("i : ℕ ⟶ Type i ⊆ Type (succ i)")
+            
         }
     }
