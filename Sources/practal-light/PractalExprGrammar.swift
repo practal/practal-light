@@ -117,9 +117,7 @@ public class PractalExprGrammar : TextGrammar {
             
             _VarList1.rule {
                 _VarList1[1]
-                _OptSpace[0]
-                const(",")
-                _OptSpace[1]
+                _OptSpace
                 Var
             }
             
