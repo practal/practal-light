@@ -61,7 +61,7 @@
             print("t = \(t)")
             XCTAssertEqual(t, e("(eq. u (eq. v w))"))
             print("pretty = '\(theory.pretty(t))'")
-            XCTAssertEqual(theory.pretty(t), "(u = (v = w))")
+            XCTAssertEqual(theory.pretty(t), "u = (v = w)")
             theory.introduce("(abs x. T B[x])", syntax: "λ x : T. B")
             let lam = theory.parse("λ x : y. z")
             XCTAssertEqual(lam, e("(abs x. y z)"))
@@ -130,5 +130,20 @@
             theory.define("(ex-in x. T P[x])", "∃ x. x : T ∧ P[x]", syntax: "∃ x : T. `P", priority: BINDER_PRIO)
             theory.define("(sub-type. U V)", "∀ u : U. u : V", syntax: "U ⊆ V", priority: REL_PRIO)
             
+            func axiom(_ expr : String) {
+                let t = theory.parse(expr)
+                XCTAssertNotNil(theory.checkWellformedness(t))
+                print("axiom: ⊢ \(theory.pretty(t))")
+            }
+            
+            axiom("a = a")
+            axiom("(a = b) : ℙ")
+            axiom("∀ p : ℙ. p = ⊥ ∨ p = ⊤")
+            axiom("⊤ ≠ ⊥")
+            
+            theory.define("(Empty.)", "{ p : ℙ | ⊥ }", syntax: "∅")
+            
+            
+        
         }
     }
