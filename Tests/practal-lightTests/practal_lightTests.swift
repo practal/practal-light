@@ -76,6 +76,7 @@
         }
         
         func testPracticalTypes() {
+            let CONTROL_PRIO : Float = 0
             let BINDER_PRIO : Float = 10
             let LOGIC_PRIO : Float = 20
             let REL_PRIO : Float = 30
@@ -137,7 +138,7 @@
             introduce("(in. A T)", syntax: "A : T", priority: REL_PRIO)
             
             introduce("(all x. P[x])", syntax: "∀ x. `P", priority: BINDER_PRIO)
-            introduce("(choose x. T P[x])", syntax: "ε x : T. `P", priority: BINDER_PRIO)
+            introduce("(choose x. P[x])", syntax: "ε x. `P", priority: BINDER_PRIO)
             introduce("(imp. A B)", syntax: "A ⟶ `B", priority: LOGIC_PRIO + IMP_RPRIO)
             introduce("(false.)", syntax: "⊥")
             
@@ -164,7 +165,9 @@
             define("(ex x. P[x])", "¬(∀ x. ¬P[x])", syntax: "∃ x. `P", priority: BINDER_PRIO)
             define("(all-in x. T P[x])", "∀ x. x : T ⟶ P[x]", syntax: "∀ x : T. `P", priority: BINDER_PRIO)
             define("(ex-in x. T P[x])", "∃ x. x : T ∧ P[x]", syntax: "∃ x : T. `P", priority: BINDER_PRIO)
-            define("(sub-type. U V)", "∀ u : U. u : V", syntax: "U ⊆ V", priority: REL_PRIO)
+            define("(is-Type. T)", "∃ i. T : Type i", syntax: "T : Type", priority: REL_PRIO)
+            define("(if-then-else. p A B)", "ε x. (p ⟶ x = A) ∧ (¬ p ⟶ x = B)", syntax: "if p then A else B", priority: CONTROL_PRIO)
+            define("(sub-type. U V)", "U : Type ∧ V : Type ∧ (∀ u : U. u : V)", syntax: "U ⊆ V", priority: REL_PRIO)
                         
             axiom("a = a")
             axiom("(a = b) : ℙ")
@@ -229,11 +232,10 @@
             axiom("i : ℕ ⟶ Type i : Type (succ i)")
             axiom("i : ℕ ⟶ Type i ⊆ Type (succ i)")
             
-            define("(is-Type. T)", "∃ i. T : Type i", syntax: "T : Type", priority: REL_PRIO)
-            
             show("t : Type")
             
             define("(all-type T. P[T])", "∀ T. T : Type ⟶ P[T]", syntax: "∀ T : Type. `P", priority: BINDER_PRIO)
             define("(ex-type T. P[T])", "∃ T. T : Type ∧ P[T]", syntax: "∃ T : Type. `P", priority: BINDER_PRIO)
+            
         }
     }
