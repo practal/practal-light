@@ -265,7 +265,13 @@
             axiom("T → (⋃ x : T. {B[x]}) ↓ ⟶ x : T ⟶ (λ x : T. B[x]) x = B[x]")
             
             // for now, do a simple definition
-            define("(Pair. U V)", "{ f : ℙ → U ∪ V | f ⊥ : U ∧ f ⊤ : V }", syntax: "U ⨯ V")
+            define("(Pair. U V)", "{ f : ℙ → U ∪ V | f ⊥ : U ∧ f ⊤ : V }", syntax: "U ⨯ `V")
+            introduce("(fst. p)", syntax: "fst p", priority: APP_PRIO)
+            introduce("(snd. p)", syntax: "snd p", priority: APP_PRIO)
+
+            define("(D-Fun a. A B[a])", "{ f : A → (⋃ a : A. B[a]) | ∀ a : A. f a : B[a] }", syntax: "[a : A] → `B", priority: TYPE_PRIO + FUN_RPRIO)
+            define("(D-Pair a. A B[a])", "{ p : A ⨯ (⋃ a : A. B[a]) | snd p : B[fst p] }", syntax: "[a : A] ⨯ `B", priority: TYPE_PRIO + FUN_RPRIO)
+            
             
         }
     }
