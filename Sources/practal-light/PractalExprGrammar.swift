@@ -18,6 +18,7 @@ public class PractalExprGrammar : TextGrammar {
     @Sym var _AtomicExpr : N
 
     @Sym var ExprList : N
+    @Sym var ExprCommaList : N
 
     @Sym var Variable : N
     @Sym var Constant : N
@@ -103,14 +104,18 @@ public class PractalExprGrammar : TextGrammar {
             Variable.rule {
                 Var
                 const("[")
-                ExprList
+                ExprCommaList
                 const("]")
             }
 
             Variable.rule {
                 Var
             }
-                        
+        }
+    }
+    
+    public func addListRules() {
+        add {
             _VarList1.rule {
                 Var
             }
@@ -130,16 +135,25 @@ public class PractalExprGrammar : TextGrammar {
             VarList.rule {
                 _OptSpace
             }
-        }
-    }
-    
-    public func addConstantRules() {
-        add {
+
             ExprList.rule {
                 Seq(_AtomicExpr, RepeatGreedy(Seq(_OptSpace, _AtomicExpr)))
             }
             
             ExprList.rule { }
+
+            ExprCommaList.rule {
+                Seq(_Expr, RepeatGreedy(Seq(_OptSpace, const(","), _OptSpace, _Expr)))
+            }
+            
+            ExprCommaList.rule {
+                _OptSpace
+            }
+        }
+    }
+    
+    public func addConstantRules() {
+        add {
                         
             Const.rule {
                 Id
@@ -315,6 +329,7 @@ public class PractalExprGrammar : TextGrammar {
         addIDRules()
         addVariableRules()
         addConstantRules()
+        addListRules()
         addConcreteSyntaxRules()
         
         addConcreteSyntaxSpecRules()

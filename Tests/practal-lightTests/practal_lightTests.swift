@@ -209,6 +209,9 @@
             define("(defined-eq. x y)", "(x↓ ∨ y↓) ∧ x = y", syntax: "x =↓ y", priority: REL_PRIO)
             define("(undefined-eq. x y)", "x↑ ∨ y↑ ∨ x = y", syntax: "x =↑ y", priority: REL_PRIO)
             
+            axiom("(∃ x. P[x]) ⟶ P[ε x. P[x]]")
+            axiom("¬(∃ x. P[x]) ⟶ (ε x. P[x]) = nil")
+            
             show("{ a : A | P a }")
             
             axiom("(a : { a : A | P a }) = (a : A ∧ P a)")

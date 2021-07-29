@@ -80,7 +80,8 @@ public class PractalExprParser {
         let CONST = "\(grammar.Const)"
         let VARLIST = "\(grammar.VarList)"
         let EXPRLIST = "\(grammar.ExprList)"
-        
+        let EXPRCOMMALIST = "\(grammar.ExprCommaList)"
+
         let CONCRETE_PREFIX = grammar.CONST_CONCRETE_PREFIX
         
         let input = Array(input)
@@ -115,6 +116,11 @@ public class PractalExprParser {
             return syntaxTree.children.map(conv)
         }
                 
+        func exprCommaListOf(_ syntaxTree : SyntaxTree) -> [Term] {
+            check(syntaxTree, symbol: EXPRCOMMALIST)
+            return syntaxTree.children.map(conv)
+        }
+
         func convConcrete(abstractSyntax : AbstractSyntax, concreteSyntax : ConcreteSyntax, _ syntaxTree : SyntaxTree) -> Term {
             var binders = [Var?](repeating: nil, count: abstractSyntax.binders.count)
             var params = [Term?](repeating: nil, count: abstractSyntax.params.count)
@@ -147,7 +153,7 @@ public class PractalExprParser {
             case (VARIABLE, 1): return .variable(varOf(syntaxTree[0]), params: [])
             case (VARIABLE, 2):
                 let v = varOf(syntaxTree[0])
-                let params = exprListOf(syntaxTree[1])
+                let params = exprCommaListOf(syntaxTree[1])
                 return .variable(v, params: params)
             case (CONSTANT, 3):
                 let c = constOf(syntaxTree[0])
