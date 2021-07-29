@@ -1,3 +1,3 @@
-# practal-light
+# Practal Light
 
-A description of this package.
+This is a research prototype for exploring the [Practal](https://practal.com) design space. 
