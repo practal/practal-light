@@ -170,12 +170,13 @@
             define("(is-Type. T)", "∃ i. T : Type i", syntax: "T : Type", priority: REL_PRIO)
             define("(if-then-else. p A B)", "ε x. (p ⟶ x = A) ∧ (¬ p ⟶ x = B)", syntax: "if p then A else B", priority: CONTROL_PRIO)
             define("(sub-type. U V)", "U : Type ∧ V : Type ∧ (∀ u : U. u : V)", syntax: "U ⊆ V", priority: REL_PRIO)
-                        
+            define("(Singleton. x)", "{ y : (ε T. x : T) | x = y }", syntax: "{ x }")
+            
             axiom("a = a")
             axiom("(a = b) : ℙ")
             axiom("∀ p : ℙ. p = ⊥ ∨ p = ⊤")
             axiom("⊤ ≠ ⊥")
-            
+                        
             define("(Empty.)", "{ p : ℙ | ⊥ }", syntax: "∅")
             
             axiom("f : A → B ⟶ (∀ a : A. f x : B)")
@@ -255,5 +256,9 @@
             
             show("A ∩ B ∪ C")
             show("A ∪ B ∩ C")
+            
+            axiom("¬ (x : Type) ⟶ (∃ T : 𝕋. x : T)")
+            show("{ x } = { y : T | y = x }")
+
         }
     }
