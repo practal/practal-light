@@ -259,6 +259,9 @@
             
             axiom("¬ (x : Type) ⟶ (∃ T : 𝕋. x : T)")
             show("{ x } = { y : T | y = x }")
-
+            
+            axiom("T → (⋃ x : T. {B[x]}) ↓ ⟶ (λ x : T. B[x]) : T → (⋃ x : T. {B[x]})")
+            axiom("T → (⋃ x : T. {B[x]}) ↑ ⟶ (λ x : T. B[x]) = nil")
+            axiom("T → (⋃ x : T. {B[x]}) ↓ ⟶ x : T ⟶ (λ x : T. B[x]) x = B[x]")
         }
     }
