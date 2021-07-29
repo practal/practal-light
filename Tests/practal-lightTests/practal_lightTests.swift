@@ -91,7 +91,9 @@
             
             let UNION_RPRIO : Float = 0.1
             let FUN_RPRIO : Float = 0.2
-            let TYPE_RPRIO : Float = 0.3
+            let BINARY_UNION_RPRIO : Float = 0.3
+            let BINARY_INTERSECTION_RPRIO : Float = 0.4
+            let TYPE_RPRIO : Float = 0.5
                         
             let theory = Theory()
             
@@ -237,5 +239,18 @@
             define("(all-type T. P[T])", "∀ T. T : Type ⟶ P[T]", syntax: "∀ T : Type. `P", priority: BINDER_PRIO)
             define("(ex-type T. P[T])", "∃ T. T : Type ∧ P[T]", syntax: "∃ T : Type. `P", priority: BINDER_PRIO)
             
+            axiom("(∀ a : A. T[a] : Type i) ⟶ (x : ⋃ a : A. T[a]) = (∃ a : A. x : T[a])")
+            axiom("(∀ a : A. T[a] : Type i) ⟶ (⋃ a : A. T[a]) : Type i")
+            axiom("¬(∃ i : ℕ. ∀ a : A. T[a] : Type i) ⟶ (⋃ a : A. T[a]) = nil")
+            
+            show("⋃ T : 𝕋. T")
+            
+            define("(Intersection i. I T[i])", "{ x : ⋃ i : I. T[i] | ∀ i : I. x : T[i] }", syntax: "⋂ i : I. `T", priority: TYPE_PRIO + UNION_RPRIO)
+            
+            define("(Binary-Union. A B)", "⋃ p : ℙ. (if p then A else B)", syntax: "`A ∪ B", priority: TYPE_PRIO + BINARY_UNION_RPRIO)
+            define("(Binary-Intersction. A B)", "⋂ p : ℙ. (if p then A else B)", syntax: "`A ∩ B", priority: TYPE_PRIO + BINARY_INTERSECTION_RPRIO)
+            
+            show("A ∩ B ∪ C")
+            show("A ∪ B ∩ C")
         }
     }
