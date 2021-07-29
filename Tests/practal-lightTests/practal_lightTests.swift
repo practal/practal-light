@@ -263,5 +263,9 @@
             axiom("T → (⋃ x : T. {B[x]}) ↓ ⟶ (λ x : T. B[x]) : T → (⋃ x : T. {B[x]})")
             axiom("T → (⋃ x : T. {B[x]}) ↑ ⟶ (λ x : T. B[x]) = nil")
             axiom("T → (⋃ x : T. {B[x]}) ↓ ⟶ x : T ⟶ (λ x : T. B[x]) x = B[x]")
+            
+            // for now, do a simple definition
+            define("(Pair. U V)", "{ f : ℙ → U ∪ V | f ⊥ : U ∧ f ⊤ : V }", syntax: "U ⨯ V")
+            
         }
     }
