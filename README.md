@@ -4,4 +4,4 @@ This is a research prototype for exploring the [Practal](https://practal.com) de
 
 Practal Light implements [*Practical Types*](https://doi.org/10.47757/practical.types.1) as its logic.
 
-Mock theory development is currently done in a [test case](https://github.com/practal/practal-light/blob/main/Tests/practal-lightTests/practal_lightTests.swift).
+Mock theory development is currently done in the [`testTheory`]](https://github.com/practal/practal-light/blob/main/Tests/practal-lightTests/practal_lightTests.swift#L48) test case.
