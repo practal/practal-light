@@ -17,7 +17,7 @@ public final class Theory {
     public init() {
         self._constants = [:]
         self._definitions = [:]
-        self._parser = PractalExprParser(constants: [:])
+        self._parser = PractalExprParser()
         self.dirtyParser = false
     }
     
@@ -31,7 +31,12 @@ public final class Theory {
     
     private var parser : PractalExprParser {
         if dirtyParser {
-            _parser = PractalExprParser(constants: _constants)
+            var patterns : [(SyntaxPattern, [ConcreteSyntax])] = []
+            for (_, constSyntax) in _constants {
+                let p = SyntaxPattern.from(constSyntax.abstractSyntax.term)
+                patterns.append((p, constSyntax.concreteSyntaxes))
+            }
+            _parser = PractalExprParser(patterns: patterns)
             dirtyParser = false
         }
         return _parser

@@ -44,10 +44,10 @@ public class PractalExprGrammar : TextGrammar {
     @Sym var CSF_RaisedVar : T
     @Sym var CSF_Text : T
     
-    private let constants : [Const : ConstSyntax]
+    private let patterns : [(SyntaxPattern, [ConcreteSyntax])]
     
-    public init(constants : [Const : ConstSyntax]) {
-        self.constants = constants
+    public init(patterns : [(SyntaxPattern, [ConcreteSyntax])]) {
+        self.patterns = patterns
         super.init()
     }
 
@@ -180,15 +180,7 @@ public class PractalExprGrammar : TextGrammar {
         var topExpr : N
         var atomicExpr : N
         
-        init(constants : [Const : ConstSyntax], grammar : PractalExprGrammar) {
-            var prios : Set<Float> = []
-            for (_, syntax) in constants {
-                for cs in syntax.concreteSyntaxes {
-                    if let p = cs.priority {
-                        prios.insert(p)
-                    }
-                }
-            }
+        init(_ prios : Set<Float>, grammar : PractalExprGrammar) {
             let priorities = Array(prios).sorted()
             for (rank, p) in priorities.enumerated() {
                 prioRanks[p] = rank
@@ -267,29 +259,82 @@ public class PractalExprGrammar : TextGrammar {
         return collectRuleBody(elems)
     }
     
-    public let CONST_CONCRETE_PREFIX = "const-concrete-"
+    func syntaxPatternRuleBody(syntaxPattern : SyntaxPattern, concreteSyntax : ConcreteSyntax, E : N, E_raised : N) -> RuleBody
+    {
+        var elems : [RuleBody] = []
+        var i = 0
+        var first : Bool = true
+        for fragment in concreteSyntax.fragments {
+            switch fragment {
+            case .Space:
+                if !first {
+                    elems.append(_OptSpace[i])
+                    first = true
+                }
+            case .Text(let syntax):
+                if !first {
+                    elems.append(_OptSpace[i])
+                }
+                first = false
+                elems.append(const(syntax))
+            case .Keyword(let keyword):
+                if !first {
+                    elems.append(_OptSpace[i])
+                }
+                first = false
+                let k = const(keyword)
+                add {
+                    prioritise(terminal: k, over: Var)
+                }
+                elems.append(k)
+            case let .Var(v, raised: raised):
+                if !first {
+                    elems.append(_OptSpace[i])
+                }
+                first = false
+                if syntaxPattern.containsBinder(v) {
+                    elems.append(Var[i])
+                } else {
+                    elems.append(raised ? E_raised[i] : E[i])
+                }
+            }
+            i += 1
+        }
+        return collectRuleBody(elems)
+    }
 
-    public func addConstSyntaxRules(const : Const, syntax : ConstSyntax, priorities : Priorities) {
-        guard let syntax = constants[const] else { return }
-        for i in 0 ..< syntax.concreteSyntaxes.count {
-            let concrete_const = nonterminal(SymbolName("\(CONST_CONCRETE_PREFIX)\(i)-\(const.id)"))
-            let concreteSyntax = syntax.concreteSyntaxes[i]
+    internal static func syntaxPatternNonterminalName(patternIndex : Int, concreteSyntax : Int) -> String {
+        return "syntaxpattern-\(patternIndex)-\(concreteSyntax)"
+    }
+    
+    public func addPatternRules(patternIndex : Int, pattern : SyntaxPattern, syntax : [ConcreteSyntax], priorities : Priorities) {
+        for i in 0 ..< syntax.count {
+            let N = nonterminal(SymbolName(PractalExprGrammar.syntaxPatternNonterminalName(patternIndex: patternIndex, concreteSyntax: i)))
+            let concreteSyntax = syntax[i]
             let E = priorities.lookup(concreteSyntax.priority)
             add {
                 E.parent.rule {
-                    concrete_const
+                    N
                 }
-                concrete_const.rule {
-                    constConcreteRuleBody(abstractSyntax: syntax.abstractSyntax, concreteSyntax: concreteSyntax, E: E.child, E_raised: E.raised_child)
+                N.rule {
+                    syntaxPatternRuleBody(syntaxPattern: pattern, concreteSyntax: concreteSyntax, E: E.child, E_raised: E.raised_child)
                 }
             }
         }
     }
     
     public func addConcreteSyntaxRules() {
-        let priorities = Priorities(constants: constants, grammar: self)
-        for (const, syntax) in constants {
-            addConstSyntaxRules(const: const, syntax: syntax, priorities: priorities)
+        var prios : Set<Float> = []
+        for (_, css) in patterns {
+            for cs in css {
+                if let p = cs.priority {
+                    prios.insert(p)
+                }
+            }
+        }
+        let priorities = Priorities(prios, grammar: self)
+        for (i, (pattern, syntax)) in patterns.enumerated() {
+            addPatternRules(patternIndex: i, pattern: pattern, syntax: syntax, priorities: priorities)
         }
     }
     
