@@ -12,12 +12,25 @@ public class PractalExprParser {
     
     public let grammar : PractalExprGrammar
     public let parser : Parser<Character>
-    public let constants : [Const : ConstSyntax]
+    public let patterns : [(SyntaxPattern, [ConcreteSyntax])]
+    private let patternLookup : [String : (syntaxPattern : Int, concreteSyntax : Int)]
     
-    public init(constants : [Const : ConstSyntax] = [:]) {
-        self.grammar = PractalExprGrammar(constants: constants)
+    public init(patterns : [(SyntaxPattern, [ConcreteSyntax])] = []) {
+        self.grammar = PractalExprGrammar(patterns: patterns)
         self.parser = grammar.parser()
-        self.constants = constants
+        self.patterns = patterns
+        self.patternLookup = PractalExprParser.makePatternLookup(patterns : patterns)
+    }
+    
+    private static func makePatternLookup(patterns : [(SyntaxPattern, [ConcreteSyntax])]) -> [String : (syntaxPattern : Int, concreteSyntax : Int)] {
+        var lookup : [String : (syntaxPattern : Int, concreteSyntax : Int)] = [:]
+        for (i, (_, css)) in patterns.enumerated() {
+            for cs in 0 ..< css.count {
+                let name = PractalExprGrammar.syntaxPatternNonterminalName(patternIndex: i, concreteSyntax: cs)
+                lookup[name] = (syntaxPattern: i, concreteSyntax: cs)
+            }
+        }
+        return lookup
     }
     
     public func parse(expr : String) -> Set<Term> {
@@ -81,8 +94,6 @@ public class PractalExprParser {
         let VARLIST = "\(grammar.VarList)"
         let EXPRLIST = "\(grammar.ExprList)"
         let EXPRCOMMALIST = "\(grammar.ExprCommaList)"
-
-        let CONCRETE_PREFIX = grammar.CONST_CONCRETE_PREFIX
         
         let input = Array(input)
 
@@ -121,32 +132,20 @@ public class PractalExprParser {
             return syntaxTree.children.map(conv)
         }
 
-        func convConcrete(abstractSyntax : AbstractSyntax, concreteSyntax : ConcreteSyntax, _ syntaxTree : SyntaxTree) -> Term {
-            var binders = [Var?](repeating: nil, count: abstractSyntax.binders.count)
-            var params = [Term?](repeating: nil, count: abstractSyntax.params.count)
+        func convConcrete(pattern : SyntaxPattern, concreteSyntax : ConcreteSyntax, _ syntaxTree : SyntaxTree) -> Term {
+            var terms : [Var : Term] = [:]
+            var binders : [Var : Var] = [:]
             for (i, v) in concreteSyntax.vars.enumerated() {
-                if let b = abstractSyntax.binderOf(v) {
-                    binders[b] = varOf(syntaxTree[i])
-                } else if let p = abstractSyntax.paramOf(v) {
-                    params[p] = conv(syntaxTree[i])
+                if pattern.containsBinder(v) {
+                    let w = varOf(syntaxTree[i])
+                    binders[v] = w
                 } else {
-                    fatalError("internal error")
+                    terms[v] = conv(syntaxTree[i])
                 }
             }
-            return .constant(abstractSyntax.const, binders: binders.map { b in b!}, params: params.map { p in p!})
+            return pattern.instantiate(binders, terms)
         }
-        
-        func extractConcrete(symbol : String) -> (const : Const, index : Int)? {
-            guard symbol.hasPrefix(CONCRETE_PREFIX) else { return nil }
-            var constname = String(symbol.dropFirst(CONCRETE_PREFIX.count))
-            let i = constname.firstIndex(of: "-")!
-            let index = Int(constname[..<i])!
-            let j = constname.index(after: i)
-            constname = String(constname[j...])
-            let const = Const(constname)!
-            return (const: const, index: index)
-        }
-        
+                
         func conv(_ syntaxTree : SyntaxTree) -> Term {
             switch (syntaxTree.symbol, syntaxTree.children.count) {
             case (PRACTAL_EXPR, 1): return conv(syntaxTree.children[0])
@@ -161,12 +160,12 @@ public class PractalExprParser {
                 let params = exprListOf(syntaxTree[2])
                 return .constant(c, binders: binders, params: params)
             case let (symbol, arity):
-                guard let (const, index) = extractConcrete(symbol: symbol) else {
+                guard let pattern = patternLookup[symbol] else {
                     fatalError("cannot convert symbol '\(symbol)' with arity \(arity)")
                 }
-                let syntax = constants[const]!
-                let concreteSyntax = syntax.concreteSyntaxes[index]
-                return convConcrete(abstractSyntax: syntax.abstractSyntax, concreteSyntax: concreteSyntax, syntaxTree)
+                let p = patterns[pattern.syntaxPattern]
+                let concreteSyntax = p.1[pattern.concreteSyntax]
+                return convConcrete(pattern: p.0, concreteSyntax: concreteSyntax, syntaxTree)
             }
         }
         
