@@ -36,13 +36,20 @@
             let parser = PractalExprParser()
             let css = parser.parse(css: " ∀ x : Type. B -->   ye:d ")
             XCTAssertEqual(css, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x"), raised: true), .Space, .Text(":"), .Space, .Var(v("Type"), raised: true), .Text("."), .Space,
-                                                           .Var(v("B"), raised: true), .Space, .Text("-->"), .Space, .Var(v("ye"), raised: true), .Text(":"), .Var(v("d"), raised: true)], priority: nil))
+                                                           .Var(v("B"), raised: true), .Space, .Text("-->"), .Space, .Var(v("ye"), raised: true), .Text(":"), .Var(v("d"), raised: true)], priority: .None))
             let selected = css!.selectVars { x in x == v("x") || x == v("B") || x == v("d") }
             print("selected = \(selected)")
             XCTAssertEqual(selected, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x"), raised: true), .Space, .Text(":"), .Space, .Keyword("Type"), .Text("."), .Space,
-                                                                .Var(v("B"), raised: true), .Space, .Text("-->"), .Space, .Keyword("ye"), .Text(":"), .Var(v("d"), raised: true)], priority: nil))
+                                                                .Var(v("B"), raised: true), .Space, .Text("-->"), .Space, .Keyword("ye"), .Text(":"), .Var(v("d"), raised: true)], priority: .None))
             let eqAB = parser.parse(css: "A = B")
-            XCTAssertEqual(eqAB, ConcreteSyntax(fragments: [.Var(v("A"), raised: true), .Space, .Text("="), .Space, .Var(v("B"), raised: true)], priority: nil))
+            XCTAssertEqual(eqAB, ConcreteSyntax(fragments: [.Var(v("A"), raised: true), .Space, .Text("="), .Space, .Var(v("B"), raised: true)], priority: .None))
+        }
+        
+        func testPretty() {
+            let theory = Theory()
+            theory.introduce("(eq. A B)", syntax: "A = B")
+            let t = theory.parse("(u = (v = w))")
+            print("pretty = \(theory.pretty(t))")
         }
         
         func testTheory() {
@@ -106,7 +113,7 @@
             }
             
             func introduce(_ expr : String, syntax : String, priority : Float? = nil) {
-                theory.introduce(expr, syntax: syntax, priority: priority)
+                theory.introduce(expr, syntax: syntax, priority: ConcreteSyntax.Priority.from(priority, default: .Atomic))
                 let t = theory.parse(expr)
                 XCTAssertNotNil(theory.checkWellformedness(t))
                 print("introduce: \(theory.pretty(t))")
@@ -125,7 +132,7 @@
             }
             
             func define(_ abstractSyntax : String, _ definition : String, syntax : String, priority : Float? = nil) {
-                let const = theory.define(abstractSyntax, definition, syntax: syntax, priority: priority)
+                let const = theory.define(abstractSyntax, definition, syntax: syntax, priority: ConcreteSyntax.Priority.from(priority, default: .Atomic))
                 let t = theory.parse(abstractSyntax)
                 print("\(const): ⊢ \(theory.pretty(t)) ≝ \(definition)")
             }
@@ -252,7 +259,7 @@
             define("(Intersection i. I T[i])", "{ x : ⋃ i : I. T[i] | ∀ i : I. x : T[i] }", syntax: "⋂ i : I. `T", priority: TYPE_PRIO + UNION_RPRIO)
             
             define("(Binary-Union. A B)", "⋃ p : ℙ. (if p then A else B)", syntax: "`A ∪ B", priority: TYPE_PRIO + BINARY_UNION_RPRIO)
-            define("(Binary-Intersction. A B)", "⋂ p : ℙ. (if p then A else B)", syntax: "`A ∩ B", priority: TYPE_PRIO + BINARY_INTERSECTION_RPRIO)
+            define("(Binary-Intersection. A B)", "⋂ p : ℙ. (if p then A else B)", syntax: "`A ∩ B", priority: TYPE_PRIO + BINARY_INTERSECTION_RPRIO)
             
             show("A ∩ B ∪ C")
             show("A ∪ B ∩ C")

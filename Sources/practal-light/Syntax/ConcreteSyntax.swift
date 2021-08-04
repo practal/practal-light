@@ -1,5 +1,5 @@
 //
-//  ConstSyntax.swift
+//  ConcreteSyntax.swift
 //
 //  Created by Steven Obua on 26/07/2021.
 //
@@ -7,6 +7,20 @@
 import Foundation
 
 public struct ConcreteSyntax : CustomStringConvertible, Hashable {
+    
+    public enum Priority : Hashable {
+        case Atomic
+        case None
+        case Level(Float)
+        
+        public static func from(_ priority : Float?, default : Priority) -> Priority {
+            if let p = priority {
+                return .Level(p)
+            } else {
+                return `default`
+            }
+        }
+    }
     
     public enum Fragment : Hashable {
         case Var(Var, raised: Bool)  // the raised vars get the next higher priority class
@@ -16,14 +30,14 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
     }
 
     public let fragments : [Fragment]
-    public let priority : Float?
+    public let priority : Priority
     
-    public init(fragments : [Fragment], priority : Float?) {
+    public init(fragments : [Fragment], priority : Priority = .None) {
         self.fragments = fragments
         self.priority = priority
     }
     
-    public func withPriority(_ priority : Float?) -> ConcreteSyntax {
+    public func withPriority(_ priority : Priority) -> ConcreteSyntax {
         return ConcreteSyntax(fragments: fragments, priority: priority)
     }
     
@@ -101,75 +115,3 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
 
 }
 
-public struct AbstractSyntax : Hashable {
-    
-    public let const : Const
-    
-    public let binders : [Var]
-    
-    public let params : [Term]
-    
-    public var term : Term {
-        return .constant(const, binders: binders, params: params)
-    }
-    
-    public var freeVars : [Var : Int] {
-        var vs : [Var : Int] = [:]
-        for p in params {
-            switch p {
-            case let .variable(v, deps): vs[v] = deps.count
-            case .constant: fatalError("internal error")
-            }
-        }
-        return vs
-    }
-    
-    public var allVars : [Var : Int] {
-        var vs = freeVars
-        for v in binders {
-            vs[v] = 0
-        }
-        return vs
-    }
-    
-    public func binderOf(_ v : Var) -> Int? {
-        return binders.firstIndex(of: v)
-    }
-    
-    public func paramOf(_ v : Var) -> Int? {
-        params.firstIndex { term in
-            switch term {
-            case let .variable(w, _) where v == w: return true
-            default: return false
-            }
-        }
-    }
-    
-    public func selectBoundVars(param : Int, binders _binders : [Var]) -> [Var] {
-        var vars : [Var] = []
-        switch params[param] {
-        case let .variable(_, params: params):
-            for p in params {
-                guard let d = p.boundVar else {
-                    fatalError()
-                }
-                let i = binderOf(d)!
-                vars.append(_binders[i])
-            }
-        case .constant: fatalError()
-        }
-        return vars
-    }
-    
-}
-
-public struct ConstSyntax {
-    
-    public let abstractSyntax : AbstractSyntax
-    
-    public var concreteSyntaxes : [ConcreteSyntax]
-
-    public mutating func append(_ concreteSyntax : ConcreteSyntax) {
-        concreteSyntaxes.append(concreteSyntax)
-    }
-}
