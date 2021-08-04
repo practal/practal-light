@@ -198,8 +198,8 @@ public final class PrettyPrinter {
         var s : String = ""
         for f in tree.fragments {
             switch f {
-            case let .Const(c): s.append(c.id)
-            case let .Var(v): s.append(v.id)
+            case let .Const(c): s.append(c.description)
+            case let .Var(v): s.append(v.description)
             case let .Keyword(keyword): s.append(keyword)
             case .Space: s.append(" ")
             case let .Text(text): s.append(text)

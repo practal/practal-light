@@ -99,6 +99,7 @@ public class PractalExprGrammar : TextGrammar {
         add {
             Var.rule {
                 Id
+                RepeatGreedy(const(practal_light.Var.PRIME))
             }
                         
             Variable.rule {
@@ -156,9 +157,9 @@ public class PractalExprGrammar : TextGrammar {
         add {
                         
             Const.rule {
-                Id
+                Seq(Id, RepeatGreedy(Seq(const(Namespace.SEPARATOR), Id)))
             }
-                        
+                                    
             Constant.rule {
                 const("(")
                 _OptSpace[0]

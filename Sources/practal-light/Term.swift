@@ -6,8 +6,85 @@
 
 import Foundation
 
-public typealias Var = Id
-public typealias Const = Id
+public struct Var : Hashable, CustomStringConvertible {
+    
+    public static let PRIME : Character = "’"
+    
+    public let name : Id
+    public let primes : Int
+    
+    public init(name : Id, primes : Int = 0) {
+        guard primes >= 0 else { fatalError() }
+        self.name = name
+        self.primes = primes
+    }
+    
+    public init?(primed: String) {
+        var t = primed
+        var primes = 0
+        while t.last == Var.PRIME {
+            t.removeLast()
+            primes += 1
+        }
+        guard let id = Id(t) else { return nil }
+        self.name = id
+        self.primes = primes
+    }
+    
+    public var description : String {
+        var d = name.description
+        for _ in 0 ..< primes {
+            d.append(Var.PRIME)
+        }
+        return d
+    }
+    
+}
+
+public struct Namespace : Hashable {
+    
+    public static let SEPARATOR : Character = "."
+    
+    public var components : [Id]
+    
+    public init(_ components : [Id] = []) {
+        self.components = components
+    }
+    
+    public var isEmpty : Bool {
+        return components.isEmpty
+    }
+}
+
+public struct Const : Hashable, CustomStringConvertible {
+    public let namespace : Namespace
+    public let name : Id
+    
+    public init(namespace : Namespace = Namespace(), name : Id) {
+        self.namespace = namespace
+        self.name = name
+    }
+    
+    public init?(qualified : String) {
+        let splits = qualified.split(separator: Namespace.SEPARATOR, omittingEmptySubsequences: false)
+        if splits.isEmpty { return nil }
+        var ids : [Id] = []
+        for s in splits {
+            guard let id = Id(String(s)) else { return nil }
+            ids.append(id)
+        }
+        self.name = ids.removeLast()
+        self.namespace = Namespace(ids)
+    }
+    
+    public var description: String {
+        var d = name.description
+        for n in namespace.components.reversed() {
+            d = "\(n)\(Namespace.SEPARATOR)\(d)"
+        }
+        return d
+    }
+}
 
 public enum Term : Hashable {
     case variable(Var, params: [Term])
