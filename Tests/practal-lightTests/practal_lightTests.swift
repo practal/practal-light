@@ -36,13 +36,13 @@
             let parser = PractalExprParser()
             let css = parser.parse(css: " ∀ x : Type. B -->   ye:d ")
             XCTAssertEqual(css, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x"), raised: true), .Space, .Text(":"), .Space, .Var(v("Type"), raised: true), .Text("."), .Space,
-                                                           .Var(v("B"), raised: true), .Space, .Text("-->"), .Space, .Var(v("ye"), raised: true), .Text(":"), .Var(v("d"), raised: true)], priority: nil))
+                                                           .Var(v("B"), raised: true), .Space, .Text("-->"), .Space, .Var(v("ye"), raised: true), .Text(":"), .Var(v("d"), raised: true)], priority: .None))
             let selected = css!.selectVars { x in x == v("x") || x == v("B") || x == v("d") }
             print("selected = \(selected)")
             XCTAssertEqual(selected, ConcreteSyntax(fragments: [.Text("∀"), .Space, .Var(v("x"), raised: true), .Space, .Text(":"), .Space, .Keyword("Type"), .Text("."), .Space,
-                                                                .Var(v("B"), raised: true), .Space, .Text("-->"), .Space, .Keyword("ye"), .Text(":"), .Var(v("d"), raised: true)], priority: nil))
+                                                                .Var(v("B"), raised: true), .Space, .Text("-->"), .Space, .Keyword("ye"), .Text(":"), .Var(v("d"), raised: true)], priority: .None))
             let eqAB = parser.parse(css: "A = B")
-            XCTAssertEqual(eqAB, ConcreteSyntax(fragments: [.Var(v("A"), raised: true), .Space, .Text("="), .Space, .Var(v("B"), raised: true)], priority: nil))
+            XCTAssertEqual(eqAB, ConcreteSyntax(fragments: [.Var(v("A"), raised: true), .Space, .Text("="), .Space, .Var(v("B"), raised: true)], priority: .None))
         }
         
         func testPretty() {
@@ -113,7 +113,7 @@
             }
             
             func introduce(_ expr : String, syntax : String, priority : Float? = nil) {
-                theory.introduce(expr, syntax: syntax, priority: priority)
+                theory.introduce(expr, syntax: syntax, priority: ConcreteSyntax.Priority.from(priority, default: .Atomic))
                 let t = theory.parse(expr)
                 XCTAssertNotNil(theory.checkWellformedness(t))
                 print("introduce: \(theory.pretty(t))")
@@ -132,7 +132,7 @@
             }
             
             func define(_ abstractSyntax : String, _ definition : String, syntax : String, priority : Float? = nil) {
-                let const = theory.define(abstractSyntax, definition, syntax: syntax, priority: priority)
+                let const = theory.define(abstractSyntax, definition, syntax: syntax, priority: ConcreteSyntax.Priority.from(priority, default: .Atomic))
                 let t = theory.parse(abstractSyntax)
                 print("\(const): ⊢ \(theory.pretty(t)) ≝ \(definition)")
             }

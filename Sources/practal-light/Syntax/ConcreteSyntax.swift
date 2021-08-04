@@ -8,6 +8,20 @@ import Foundation
 
 public struct ConcreteSyntax : CustomStringConvertible, Hashable {
     
+    public enum Priority : Hashable {
+        case Atomic
+        case None
+        case Level(Float)
+        
+        public static func from(_ priority : Float?, default : Priority) -> Priority {
+            if let p = priority {
+                return .Level(p)
+            } else {
+                return `default`
+            }
+        }
+    }
+    
     public enum Fragment : Hashable {
         case Var(Var, raised: Bool)  // the raised vars get the next higher priority class
         case Space
@@ -16,14 +30,14 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
     }
 
     public let fragments : [Fragment]
-    public let priority : Float?
+    public let priority : Priority
     
-    public init(fragments : [Fragment], priority : Float?) {
+    public init(fragments : [Fragment], priority : Priority = .None) {
         self.fragments = fragments
         self.priority = priority
     }
     
-    public func withPriority(_ priority : Float?) -> ConcreteSyntax {
+    public func withPriority(_ priority : Priority) -> ConcreteSyntax {
         return ConcreteSyntax(fragments: fragments, priority: priority)
     }
     

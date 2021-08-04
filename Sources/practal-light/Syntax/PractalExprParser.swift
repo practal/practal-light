@@ -80,7 +80,7 @@ public class PractalExprParser {
             guard trees.count == 1 else {
                 return nil
             }
-            return convert(css: css, syntaxTree: trees.first!, priority: nil)
+            return convert(css: css, syntaxTree: trees.first!, priority: .None)
         }
 
     }
@@ -172,7 +172,7 @@ public class PractalExprParser {
         return syntaxTrees.map(conv)
     }
     
-    public func convert(css input : String, syntaxTree : SyntaxTree, priority : Float?) -> ConcreteSyntax? {
+    public func convert(css input : String, syntaxTree : SyntaxTree, priority : ConcreteSyntax.Priority) -> ConcreteSyntax? {
         let CSS = "\(grammar.ConcreteSyntaxSpec)"
         let CSF_VAR = "\(grammar.CSF_Var)"
         let CSF_RAISED_VAR = "\(grammar.CSF_RaisedVar)"

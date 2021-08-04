@@ -215,7 +215,7 @@ public final class Theory {
         invalidateSyntax()
     }
     
-    public func addSyntax(const : Const, syntax : String, priority : Float? = nil) {
+    public func addSyntax(const : Const, syntax : String, priority : ConcreteSyntax.Priority) {
         guard let css = parser.parse(css: syntax) else {
             fatalError("Could not parse concrete syntax spec '\(syntax)'")
         }
@@ -223,14 +223,14 @@ public final class Theory {
     }
     
     @discardableResult
-    public func introduce(_ constant : String, syntax : String..., priority : Float? = nil) -> Const {
+    public func introduce(_ constant : String, syntax : String..., priority : ConcreteSyntax.Priority = .None) -> Const {
         let const = introduce(constant: parse(constant))
         for s in syntax { addSyntax(const: const, syntax: s, priority: priority) }
         return const
     }
     
     @discardableResult
-    public func define(_ constant : String, _ definition : String, syntax : String..., priority : Float? = nil) -> Const {
+    public func define(_ constant : String, _ definition : String, syntax : String..., priority : ConcreteSyntax.Priority = .None) -> Const {
         let lhs = parse(constant)
         let rhs = parse(definition)
         let const = define(constant: lhs, definition: rhs)

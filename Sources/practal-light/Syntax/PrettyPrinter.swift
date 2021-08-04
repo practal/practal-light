@@ -9,12 +9,8 @@ import Foundation
 
 public final class PrettyPrinter {
     
-    public enum Priority {
-        case Atomic
-        case None
-        case Level(Float)
-    }
-    
+    public typealias Priority = ConcreteSyntax.Priority
+        
     public enum Fragment {
         case Var(Var)
         case Const(Const)
@@ -132,15 +128,7 @@ public final class PrettyPrinter {
         }
         return nil
     }
-    
-    private func convert(priority : Float?) -> Priority {
-        if let p = priority {
-            return .Level(p)
-        } else {
-            return .None
-        }
-    }
-    
+        
     private func needsBrackets(_ expr : Priority, _ subExpr : Priority, raised : Bool) -> Bool {
         switch (expr, subExpr) {
         case (_, .Atomic): return false
@@ -154,7 +142,7 @@ public final class PrettyPrinter {
     }
         
     private func printMatch(_ match : Match) -> Tree {
-        let priority = convert(priority: match.concreteSyntax.priority)
+        let priority = match.concreteSyntax.priority
         var tree = Tree(priority: priority)
         for f in match.concreteSyntax.fragments {
             switch f {

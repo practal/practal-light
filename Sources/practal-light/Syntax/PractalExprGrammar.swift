@@ -199,6 +199,13 @@ public class PractalExprGrammar : TextGrammar {
             }
         }
                 
+        func lookup(_ priority : ConcreteSyntax.Priority) -> (parent: N, child: N, raised_child: N) {
+            switch priority {
+            case .Level(let l): return lookup(l)
+            case .None, .Atomic: return lookup(nil)
+            }
+        }
+        
         func lookup(_ priority : Float?) -> (parent: N, child: N, raised_child: N) {
             guard let p = priority else { return (atomicExpr, topExpr, topExpr) }
             let rank = prioRanks[p]!
@@ -327,8 +334,9 @@ public class PractalExprGrammar : TextGrammar {
         var prios : Set<Float> = []
         for (_, css) in patterns {
             for cs in css {
-                if let p = cs.priority {
-                    prios.insert(p)
+                switch cs.priority {
+                case let .Level(p): prios.insert(p)
+                default: break
                 }
             }
         }
