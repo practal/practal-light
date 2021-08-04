@@ -93,7 +93,7 @@ public final class Theory {
     }
     
     public func pretty(_ expr : Term) -> String {
-        return printer.print(expr)
+        return printer.printTerm(expr)
     }
         
     @discardableResult

@@ -11,6 +11,7 @@ public final class PrettyPrinter {
     
     public enum Priority {
         case Atomic
+        case None
         case Level(Float)
     }
     
@@ -50,6 +51,13 @@ public final class PrettyPrinter {
         }
     }
     
+    private struct Match {
+        let syntaxPattern : SyntaxPattern
+        let concreteSyntax : ConcreteSyntax
+        let binders : [Var : Var]
+        let terms : [Var : Term]
+    }
+    
     private let patterns : [(SyntaxPattern, ConcreteSyntax)]
     
     public init(patterns : [(SyntaxPattern, ConcreteSyntax)] = []) {
@@ -84,6 +92,90 @@ public final class PrettyPrinter {
         return tree
     }
     
+    private func matchPattern(_ pattern : SyntaxPattern, _ term : Term) -> (binders : [Var : Var], terms : [Var : Term])? {
+        var bound : [Var : Var] = [:]
+        var terms : [Var : Term] = [:]
+        func match(_ pattern : SyntaxPattern, _ term : Term) -> Bool {
+            switch pattern {
+            case let .variable(v):
+                terms[v] = term
+                return true
+            case let .constant(const, binders: binders, params: params):
+                switch term {
+                case .variable: return false
+                case let .constant(const2, binders: binders2, params: params2):
+                    guard const == const2 else { return false }
+                    guard binders.count == binders2.count else { return false }
+                    guard params.count == params2.count else { return false }
+                    for i in 0 ..< binders.count {
+                        bound[binders[i]] = binders2[i]
+                    }
+                    for i in 0 ..< params.count {
+                        guard match(params[i], params2[i]) else { return false }
+                    }
+                    return true
+                }
+            }
+        }
+        if match(pattern, term) {
+            return (bound, terms)
+        } else {
+            return nil
+        }
+    }
+    
+    private func findMatch(_ term : Term) -> Match? {
+        for (pattern, concreteSyntax) in patterns {
+            if let (binders, terms) = matchPattern(pattern, term) {
+                return Match(syntaxPattern: pattern, concreteSyntax: concreteSyntax, binders: binders, terms: terms)
+            }
+        }
+        return nil
+    }
+    
+    private func convert(priority : Float?) -> Priority {
+        if let p = priority {
+            return .Level(p)
+        } else {
+            return .None
+        }
+    }
+    
+    private func needsBrackets(_ expr : Priority, _ subExpr : Priority, raised : Bool) -> Bool {
+        switch (expr, subExpr) {
+        case (_, .Atomic): return false
+        case (.Atomic, _): return true
+        case (.None, _): return true
+        case (_, .None): return true
+        case let (.Level(u), .Level(v)):
+            let noBracketsNeeded = v > u || (!raised && v == u)
+            return !noBracketsNeeded
+        }
+    }
+        
+    private func printMatch(_ match : Match) -> Tree {
+        let priority = convert(priority: match.concreteSyntax.priority)
+        var tree = Tree(priority: priority)
+        for f in match.concreteSyntax.fragments {
+            switch f {
+            case let .Keyword(keyword): tree.append(.Keyword(keyword))
+            case .Space: tree.space()
+            case let .Text(text): tree.append(text)
+            case let .Var(v, raised: raised):
+                if let w = match.binders[v] {
+                    tree.append(.Var(w))
+                } else if let term = match.terms[v] {
+                    let subtree = printAsTree(term)
+                    let brackets = needsBrackets(priority, subtree.priority, raised: raised)
+                    tree.append(subtree, brackets: brackets)
+                } else {
+                    fatalError()
+                }
+            }
+        }
+        return tree
+    }
+    
     public func printAsTree(_ term : Term) -> Tree {
         switch term {
         case let .variable(v, params: params):
@@ -101,11 +193,15 @@ public final class PrettyPrinter {
             }
             return tree
         case let .constant(const, binders: binders, params: params):
-            return printRaw(const: const, binders: binders, params: params)
+            if let match = findMatch(term) {
+                return printMatch(match)
+            } else {
+                return printRaw(const: const, binders: binders, params: params)
+            }
         }
     }
     
-    public func print(_ term : Term) -> String {
+    public func printTerm(_ term : Term) -> String {
         let tree = printAsTree(term)
         return printTree(tree)
     }

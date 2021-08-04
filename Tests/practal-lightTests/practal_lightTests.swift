@@ -45,6 +45,13 @@
             XCTAssertEqual(eqAB, ConcreteSyntax(fragments: [.Var(v("A"), raised: true), .Space, .Text("="), .Space, .Var(v("B"), raised: true)], priority: nil))
         }
         
+        func testPretty() {
+            let theory = Theory()
+            theory.introduce("(eq. A B)", syntax: "A = B")
+            let t = theory.parse("(u = (v = w))")
+            print("pretty = \(theory.pretty(t))")
+        }
+        
         func testTheory() {
             let parser = PractalExprParser()
             func e(_ expr : String) -> Term {
