@@ -87,7 +87,7 @@ public final class PrettyPrinter {
         tree.append(")")
         return tree
     }
-    
+        
     private func matchPattern(_ pattern : SyntaxPattern, _ term : Term) -> (binders : [Var : Var], terms : [Var : Term])? {
         var bound : [Var : Var] = [:]
         var terms : [Var : Term] = [:]
@@ -164,7 +164,7 @@ public final class PrettyPrinter {
         return tree
     }
     
-    public func printAsTree(_ term : Term) -> Tree {
+    private func printAsTree(_ term : Term) -> Tree {
         switch term {
         case let .variable(v, params: params):
             var tree = Tree(priority: .Atomic)
@@ -188,13 +188,13 @@ public final class PrettyPrinter {
             }
         }
     }
-    
+        
     public func printTerm(_ term : Term) -> String {
         let tree = printAsTree(term)
-        return printTree(tree)
+        return PrettyPrinter.printTree(tree)
     }
 
-    public func printTree(_ tree : Tree) -> String {
+    public static func printTree(_ tree : Tree) -> String {
         var s : String = ""
         for f in tree.fragments {
             switch f {

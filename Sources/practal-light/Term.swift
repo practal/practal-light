@@ -61,8 +61,8 @@ extension Term : CustomStringConvertible {
             if params.isEmpty {
                 return v.description
             } else {
-                let ps = params.map { p in Theory.wrapBrackets(p.description) }
-                return "\(v)[\(ps.joined(separator: " "))]"
+                let ps = params.map { p in p.description }
+                return "\(v)[\(ps.joined(separator: ", "))]"
             }
         case let .constant(c, binders: binders, params: params):
             let prefix = ([c.description] + binders.map { v in v.description }).joined(separator: " ")
