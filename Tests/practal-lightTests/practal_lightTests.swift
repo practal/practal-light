@@ -252,7 +252,7 @@
             define("(Intersection i. I T[i])", "{ x : ⋃ i : I. T[i] | ∀ i : I. x : T[i] }", syntax: "⋂ i : I. `T", priority: TYPE_PRIO + UNION_RPRIO)
             
             define("(Binary-Union. A B)", "⋃ p : ℙ. (if p then A else B)", syntax: "`A ∪ B", priority: TYPE_PRIO + BINARY_UNION_RPRIO)
-            define("(Binary-Intersction. A B)", "⋂ p : ℙ. (if p then A else B)", syntax: "`A ∩ B", priority: TYPE_PRIO + BINARY_INTERSECTION_RPRIO)
+            define("(Binary-Intersection. A B)", "⋂ p : ℙ. (if p then A else B)", syntax: "`A ∩ B", priority: TYPE_PRIO + BINARY_INTERSECTION_RPRIO)
             
             show("A ∩ B ∪ C")
             show("A ∪ B ∩ C")

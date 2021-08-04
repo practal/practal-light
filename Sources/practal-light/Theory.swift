@@ -12,34 +12,46 @@ public final class Theory {
     private var _definitions : [Const : Term]
     
     private var _parser : PractalExprParser
-    private var dirtyParser : Bool
+    private var _printer : PrettyPrinter
+    private var dirtySyntax : Bool
     
     public init() {
         self._constants = [:]
         self._definitions = [:]
         self._parser = PractalExprParser()
-        self.dirtyParser = false
+        self._printer = PrettyPrinter()
+        self.dirtySyntax = false
     }
     
     public subscript(_ const : Const) -> ConstSyntax? {
         return _constants[const]
     }
     
-    private func invalidateParser() {
-        dirtyParser = true
+    private func invalidateSyntax() {
+        dirtySyntax = true
     }
     
     private var parser : PractalExprParser {
-        if dirtyParser {
+        refreshSyntax()
+        return _parser
+    }
+    
+    private var printer : PrettyPrinter {
+        refreshSyntax()
+        return _printer
+    }
+    
+    private func refreshSyntax() {
+        if dirtySyntax {
             var patterns : [(SyntaxPattern, [ConcreteSyntax])] = []
             for (_, constSyntax) in _constants {
                 let p = SyntaxPattern.from(constSyntax.abstractSyntax.term)
                 patterns.append((p, constSyntax.concreteSyntaxes))
             }
             _parser = PractalExprParser(patterns: patterns)
-            dirtyParser = false
+            _printer = PrettyPrinter(patterns: patterns)
+            dirtySyntax = false
         }
-        return _parser
     }
     
     public func parseAll(_ expr : String) -> Set<Term> {
@@ -81,40 +93,7 @@ public final class Theory {
     }
     
     public func pretty(_ expr : Term) -> String {
-        switch expr {
-        case let .variable(v, params: params):
-            guard !params.isEmpty else { return v.description }
-            let ps : [String] = params.map { p in Theory.wrapBrackets(pretty(p)) }
-            return "\(v)[\(ps.joined(separator: " "))]"
-        case let .constant(const, binders: binders, params: params):
-            let binders = binders.map { v in v.description }
-            let ps : [String] = params.map { p in Theory.wrapBrackets(pretty(p)) }
-            if let syntax = _constants[const], let concreteSyntax = syntax.concreteSyntaxes.first {
-                var result : String = ""
-                let abstractSyntax = syntax.abstractSyntax
-                for fragment in concreteSyntax.fragments {
-                    switch fragment {
-                    case .Space: result.append(" ")
-                    case let .Var(v, raised: _):
-                        if let b = abstractSyntax.binderOf(v) {
-                            result.append(binders[b])
-                        } else if let p = abstractSyntax.paramOf(v) {
-                            result.append(ps[p])
-                        } else {
-                            fatalError()
-                        }
-                    case let .Text(t):
-                        result.append(t)
-                    case let .Keyword(t):
-                        result.append(t)
-                    }
-                }
-                return result
-            } else {
-                let prefix = ([const.description] + binders).joined(separator: " ")
-                return "(" + ([prefix + "."] + ps).joined(separator: " ") + ")"
-            }
-        }
+        return printer.print(expr)
     }
         
     @discardableResult
@@ -145,7 +124,7 @@ public final class Theory {
             let abstractSyntax = AbstractSyntax(const: c, binders: binders, params: params)
             let syntax = ConstSyntax(abstractSyntax: abstractSyntax, concreteSyntaxes: [])
             _constants[c] = syntax
-            invalidateParser()
+            invalidateSyntax()
             return c
         }
     }
@@ -211,7 +190,7 @@ public final class Theory {
             }
         }
         _definitions[const] = definition
-        invalidateParser()
+        invalidateSyntax()
         return const
     }
 
@@ -233,7 +212,7 @@ public final class Theory {
         var newSyntax = syntax
         newSyntax.append(concreteSyntax)
         _constants[const] = newSyntax
-        invalidateParser()
+        invalidateSyntax()
     }
     
     public func addSyntax(const : Const, syntax : String, priority : Float? = nil) {
