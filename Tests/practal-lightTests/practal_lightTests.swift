@@ -4,11 +4,51 @@
     final class practal_lightTests: XCTestCase {
         
         func v(_ s : String) -> Var {
-            return Id(s)!
+            return Var(primed: s)!
         }
         
         func c(_ s : String) -> Const {
-            return Id(s)!
+            return Const(qualified: s)!
+        }
+
+        func testConst() {
+            let parser = PractalExprParser()
+            let const = c("eq.u")
+            XCTAssertEqual(const.namespace.components.count, 1)
+            XCTAssertEqual(parser.parse(expr: "(eq.u)"), [])
+            XCTAssertEqual(parser.parse(expr: "(eq.u.)"), [.constant(const, binders: [], params: [])])
+            XCTAssertEqual(parser.parse(expr: "(eq. u.)"), [])
+            let v : Term = .variable(v("u"), params: [])
+            XCTAssertEqual(parser.parse(expr: "(eq. u)"), [.constant(c("eq"), binders: [], params: [v])])
+        }
+        
+        func testVar() {
+            let parser = PractalExprParser()
+            func get(_ w : String) -> Var {
+                let terms = parser.parse(expr: w)
+                XCTAssertEqual(terms.count, 1)
+                let t = terms.first!
+                switch t {
+                case let .variable(v, params: []):
+                    return v
+                default:
+                    XCTFail()
+                    fatalError()
+                }
+            }
+            let w0 = get("w")
+            let w1 = get("w\(Var.PRIME)")
+            let w2 = get("w\(Var.PRIME)\(Var.PRIME)")
+            let v0 = v("w")
+            let v1 = v("w\(Var.PRIME)")
+            let v2 = v("w\(Var.PRIME)\(Var.PRIME)")
+            let id = Id("w")!
+            XCTAssertEqual(w0, Var(name: id, primes: 0))
+            XCTAssertEqual(w1, Var(name: id, primes: 1))
+            XCTAssertEqual(w2, Var(name: id, primes: 2))
+            XCTAssertEqual(v0, Var(name: id, primes: 0))
+            XCTAssertEqual(v1, Var(name: id, primes: 1))
+            XCTAssertEqual(v2, Var(name: id, primes: 2))
         }
         
         func testParser() {
@@ -18,7 +58,7 @@
                 XCTAssertEqual(terms.count, 1)
                 return terms.first!
             }
-            let terms = parser.parse(expr: "(eq. x[y] (eq.u))")
+            let terms = parser.parse(expr: "(eq. x[y] (eq. u))")
             print("terms = \(terms)")
             let u = e("u")
             let xy = e("x[y]")
