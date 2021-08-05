@@ -52,6 +52,10 @@ public struct Head : Hashable {
         return vs
     }
     
+    public func covers(_ frees : [Var : Int]) -> Bool {
+        return Term.subsumes(sub: frees, sup: freeVars)
+    }
+    
     public var allVars : [Var : Int] {
         var vs = freeVars
         for v in binders {

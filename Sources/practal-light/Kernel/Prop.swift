@@ -36,14 +36,14 @@ public struct Prop : Hashable {
         return hyps.isEmpty && concls.count == 1
     }
     
-    public func mkSimple() -> Prop {
-        if isSimple { return self }
+    public func mkSimple() -> Term {
+        if isSimple { return concls.first! }
         let Concl = Term.mk_ands(concls)
         if hyps.isEmpty {
-            return Prop(Concl)
+            return Concl
         } else {
             let Hyp = Term.mk_ands(hyps)
-            return Prop(Term.mk_imp(Hyp, Concl))
+            return Term.mk_imp(Hyp, Concl)
         }
     }
     

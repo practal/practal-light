@@ -26,17 +26,16 @@ public struct KernelContext {
         
     public enum Ext {
         case assume(Term)
-        case declare(head: Head)
-        case narrow(const: Const, frame: Term)
+        case declare(head: Head, frame: Term?)
         case define(const: Const, hyps: [Term], body: Term)
         case choose(Const, exists: Term)
     }
 
     public struct Def {
         
-        public var head : Head
+        public let head : Head
         
-        public var frame : Term?
+        public let frame : Term?
         
         public var definitions : [(hyps : [Term], body : Term)]
             
@@ -93,6 +92,14 @@ public struct KernelContext {
         return prop == th.prop
     }
     
+    private func prove(_ prover : Prover, _ props : [Term]) -> Bool {
+        if props.isEmpty { return true }
+        let prop = Prop(props)
+        guard let th = prover(self, prop) else { return false }
+        guard isValid(th) else { return false }
+        return prop == th.prop
+    }
+
     private func extend(_ addExtensions : [Ext], addAxioms : [Term] = [], mergeConstants : [Const : Def] = [:]) -> KernelContext {
         let mergedConstants = constants.merging(mergeConstants) { old, new in new }
         return KernelContext(parent: uuid, extensions: extensions + addExtensions, axioms: axioms + addAxioms, constants: mergedConstants)
@@ -111,11 +118,17 @@ public struct KernelContext {
         return Theorem(kc_uuid: uuid, prop: prop)
     }
     
-    public func declare(head : Head) -> KernelContext? {
+    public func declare(head : Head, frame : Term? = nil, prover : Prover) -> KernelContext?
+    {
         guard constants[head.const] == nil else { return nil }
-        let def = Def(head: head, frame: nil, definitions: [])
-        return extend([.declare(head: head)], mergeConstants: [head.const : def])
+        if let frame = frame {
+            guard let frees = checkWellformedness(frame) else { return nil }
+            guard head.covers(frees) else { return nil }
+            guard prove(prover, Term.mk_in_Prop(frame)) else { return nil }
+        }
+        let def = Def(head: head, frame: frame, definitions: [])
+        return extend([.declare(head: head, frame: frame)], mergeConstants: [head.const : def])
     }
-                
+                    
 }
 

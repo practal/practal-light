@@ -75,7 +75,13 @@ extension Term : CustomStringConvertible {
 
 public extension Term {
     
-        
+    static func subsumes(sub : [Var : Int], sup : [Var : Int]) -> Bool {
+        for (v, a) in sub {
+            guard let b = sup[v], b == a else { return false }
+        }
+        return true
+    }
+    
     static func mk_binary(_ op : Const, _ left : Term, _ right : Term) -> Term {
         return .constant(op, binders: [], params: [left, right])
     }
