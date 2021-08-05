@@ -18,11 +18,24 @@ public struct Prop : Hashable {
         self.concls = concls
     }
     
+    public init(hyp : Term?, _ concls : [Term]) {
+        self.concls = concls
+        if let h = hyp {
+            self.hyps = [h]
+        } else {
+            self.hyps = []
+        }
+    }
+    
     public init(hyps : [Term] = [], _ concl : Term) {
         self.hyps = hyps
         self.concls = [concl]
     }
     
+    public init(hyp : Term?, _ concl : Term) {
+        self.init(hyp: hyp, [concl])
+    }
+
     public var hasHyps : Bool {
         return !hyps.isEmpty
     }
@@ -36,7 +49,7 @@ public struct Prop : Hashable {
         return hyps.isEmpty && concls.count == 1
     }
     
-    public func mkSimple() -> Term {
+    public func flatten() -> Term {
         if isSimple { return concls.first! }
         let Concl = Term.mk_ands(concls)
         if hyps.isEmpty {

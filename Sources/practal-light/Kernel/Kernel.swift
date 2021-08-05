@@ -85,19 +85,19 @@ public struct KernelContext {
         return th.kc_uuid == uuid
     }
     
-    private func prove(_ prover : Prover, _ prop : Term) -> Bool {
-        let prop = Prop(prop)
+    private func prove(_ prover : Prover, _ prop : Prop) -> Bool {
+        if prop.concls.isEmpty { return true }
         guard let th = prover(self, prop) else { return false }
         guard isValid(th) else { return false }
         return prop == th.prop
     }
+
+    private func prove(_ prover : Prover, _ prop : Term) -> Bool {
+        return prove(prover, Prop(prop))
+    }
     
     private func prove(_ prover : Prover, _ props : [Term]) -> Bool {
-        if props.isEmpty { return true }
-        let prop = Prop(props)
-        guard let th = prover(self, prop) else { return false }
-        guard isValid(th) else { return false }
-        return prop == th.prop
+        return prove(prover, Prop(props))
     }
 
     private func extend(_ addExtensions : [Ext], addAxioms : [Term] = [], mergeConstants : [Const : Def] = [:]) -> KernelContext {
@@ -127,6 +127,24 @@ public struct KernelContext {
         }
         let def = Def(head: head, frame: frame, definitions: [])
         return extend([.declare(head: head, frame: frame)], mergeConstants: [head.const : def])
+    }
+    
+    public func define(const : Const, hyps : [Term], body : Term, prover : Prover) -> KernelContext? {
+        guard let def = constants[const] else { return nil }
+        for t in hyps + [body] {
+            guard let frees = checkWellformedness(t) else { return nil }
+            guard def.head.covers(frees) else { return nil }
+        }
+        var props : [Term] = []
+        for h in hyps {
+            props.append(Term.mk_in_Prop(h))
+        }
+        for d in def.definitions {
+            let compatible = Prop(hyps: d.hyps + hyps, Term.mk_eq(d.body, body))
+            props.append(compatible.flatten())
+        }
+        guard prove(prover, Prop(hyp: def.frame, props)) else { return nil }
+        return extend([.define(const: const, hyps: hyps, body: body)])
     }
                     
 }
