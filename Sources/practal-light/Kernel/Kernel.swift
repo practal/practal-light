@@ -93,7 +93,7 @@ public struct KernelContext {
         return prop == th.prop
     }
     
-    private func extend(_ addExtensions : [Ext] = [], _ addAxioms : [Term] = [], _ mergeConstants : [Const : Def] = [:]) -> KernelContext {
+    private func extend(_ addExtensions : [Ext], addAxioms : [Term] = [], mergeConstants : [Const : Def] = [:]) -> KernelContext {
         let mergedConstants = constants.merging(mergeConstants) { old, new in new }
         return KernelContext(parent: uuid, extensions: extensions + addExtensions, axioms: axioms + addAxioms, constants: mergedConstants)
     }
@@ -103,12 +103,18 @@ public struct KernelContext {
         guard let frees = checkWellformedness(term) else { return nil }
         guard frees.isEmpty else { return nil }
         guard prove(prover, Term.mk_in_Prop(term)) else { return nil }
-        return extend([.assume(term)])
+        return extend([.assume(term)], addAxioms: [term])
     }
             
     public func axiom(_ index : Int) -> Theorem {
         let prop = Prop(axioms[index])
         return Theorem(kc_uuid: uuid, prop: prop)
+    }
+    
+    public func declare(head : Head) -> KernelContext? {
+        guard constants[head.const] == nil else { return nil }
+        let def = Def(head: head, frame: nil, definitions: [])
+        return extend([.declare(head: head)], mergeConstants: [head.const : def])
     }
                 
 }
