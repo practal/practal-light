@@ -75,10 +75,52 @@ extension Term : CustomStringConvertible {
 
 public extension Term {
     
-    static func mk_eq(_ left : Term, _ right : Term) -> Term {
-        return .constant(Const.c_eq, binders: [], params: [left, right])
+        
+    static func mk_binary(_ op : Const, _ left : Term, _ right : Term) -> Term {
+        return .constant(op, binders: [], params: [left, right])
     }
     
+    static func mk_nullary(_ op : Const) -> Term {
+        return .constant(op, binders: [], params: [])
+    }
+    
+    static let c_true : Term = mk_nullary(.c_true)
+    
+    static let c_Prop : Term = mk_nullary(.c_Prop)
+    
+    static func mk_eq(_ left : Term, _ right : Term) -> Term {
+        return mk_binary(Const.c_eq, left, right)
+    }
+
+    static func mk_and(_ left : Term, _ right : Term) -> Term {
+        return mk_binary(Const.c_and, left, right)
+    }
+    
+    static func mk_ands(_ terms : [Term]) -> Term {
+        switch terms.count {
+        case 0: return c_true
+        case 1: return terms.first!
+        default:
+            var ands = terms.first!
+            for t in terms.dropFirst() {
+                ands = Term.mk_and(ands, t)
+            }
+            return ands
+        }
+    }
+
+    static func mk_or(_ left : Term, _ right : Term) -> Term {
+        return mk_binary(Const.c_or, left, right)
+    }
+
+    static func mk_imp(_ left : Term, _ right : Term) -> Term {
+        return mk_binary(Const.c_imp, left, right)
+    }
+    
+    static func mk_in_Prop(_ t : Term) -> Term {
+        return mk_binary(Const.c_in, t, c_Prop)
+    }
+
 }
 
 

@@ -48,28 +48,13 @@ extension KernelContext {
         }
     }
     
+    public func isWellformed(_ term : Term) -> Bool {
+        return checkWellformedness(term) != nil
+    }
+    
     /// This is guaranteed to work only for wellformed terms, otherwise the result is unspecified.
     public func freeVarsOf(_ term : Term) -> [Var : Int] {
-        var freeVars : [Var : Int] = [:]
-        func collect(boundVars : Set<Var>, term : Term) {
-            switch term {
-            case let .variable(v, params: params):
-                guard !boundVars.contains(v) else { return }
-                for p in params {
-                    collect(boundVars: boundVars, term: p)
-                }
-                freeVars[v] = params.count
-            case let .constant(const, binders: binders, params: params):
-                guard let head = constants[const]?.head else { return }
-                for (i, p) in params.enumerated() {
-                    var boundVars = boundVars
-                    boundVars.formUnion(head.selectBoundVars(param : i, binders : binders))
-                    collect(boundVars: boundVars, term: p)
-                }
-            }
-        }
-        collect(boundVars: [], term: term)
-        return freeVars
+        return checkWellformedness(term) ?? [:]
     }
     
 }

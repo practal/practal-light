@@ -37,7 +37,20 @@ public struct Const : Hashable, CustomStringConvertible {
         return d
     }
     
-    public static let c_eq = Const("Practal.eq")!
+    private static func mkC(_ name : String) -> Const {
+        return Const("Practal.\(name)")!
+    }
+    
+    public static let c_eq = mkC("eq")
+    public static let c_in = mkC("in")
+
+    public static let c_true = mkC("true")
+    public static let c_false = mkC("false")
+    public static let c_and = mkC("and")
+    public static let c_or = mkC("or")
+    public static let c_imp = mkC("imp")
+    public static let c_not = mkC("not")
+    
     public static let c_Prop = Const("Practal.Prop")!
 
 }
