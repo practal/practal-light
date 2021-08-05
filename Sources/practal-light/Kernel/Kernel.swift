@@ -142,5 +142,12 @@ public struct Kernel {
         let prop = Prop(_axioms[index])
         return Theorem(kernel_uuid: uuid, prop: prop)
     }
-        
+    
+    public func ensureFreeVars(_ cterm : CTerm) -> CTerm {
+        guard cterm.freeVars == nil else { return cterm }
+        guard cterm.kernel_uuid == uuid else { fatalError() }
+        let fvs = freeVarsOf(cterm.term)
+        return CTerm(kernel_uuid: uuid, term: cterm.term, freeVars: fvs)
+    }
+            
 }
