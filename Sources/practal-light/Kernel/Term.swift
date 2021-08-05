@@ -37,7 +37,7 @@ extension Term {
         }
     }
     
-    public var `boundVar` : Var? {
+    public var unappliedVar : Var? {
         switch self {
         case let .variable(v, params: []): return v
         default: return nil
@@ -71,6 +71,14 @@ extension Term : CustomStringConvertible {
         }
     }
 
+}
+
+public extension Term {
+    
+    static func mk_eq(_ left : Term, _ right : Term) -> Term {
+        return .constant(Const.c_eq, binders: [], params: [left, right])
+    }
+    
 }
 
 

@@ -56,7 +56,7 @@ public struct AbstractSyntax : Hashable {
         switch params[param] {
         case let .variable(_, params: params):
             for p in params {
-                guard let d = p.boundVar else {
+                guard let d = p.unappliedVar else {
                     fatalError()
                 }
                 let i = binderOf(d)!

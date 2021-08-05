@@ -20,7 +20,7 @@ public struct Var : Hashable, CustomStringConvertible {
         self.primes = primes
     }
     
-    public init?(primed: String) {
+    public init?(_ primed: String) {
         var t = primed
         var primes = 0
         while t.last == Var.PRIME {

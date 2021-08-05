@@ -17,7 +17,7 @@ public struct Const : Hashable, CustomStringConvertible {
         self.name = name
     }
     
-    public init?(qualified : String) {
+    public init?(_ qualified : String) {
         let splits = qualified.split(separator: Namespace.SEPARATOR, omittingEmptySubsequences: false)
         if splits.isEmpty { return nil }
         var ids : [Id] = []
@@ -37,4 +37,7 @@ public struct Const : Hashable, CustomStringConvertible {
         return d
     }
     
+    public static let c_eq = Const("Practal.eq")!
+    public static let c_Prop = Const("Practal.Prop")!
+
 }

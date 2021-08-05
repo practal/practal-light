@@ -116,7 +116,7 @@ public final class Theory {
                     guard !paramVars.contains(v) else { error("duplicate parameter variable '\(v)'") }
                     guard deps.count == Set(deps).count else { error("duplicate dependencies") }
                     for dep in deps {
-                        guard let d = dep.boundVar, binderVars.contains(d) else { error("dependency '\(dep)' is not a binder")}
+                        guard let d = dep.unappliedVar, binderVars.contains(d) else { error("dependency '\(dep)' is not a binder")}
                     }
                     paramVars.insert(v)
                 }

@@ -4,11 +4,11 @@
     final class practal_lightTests: XCTestCase {
         
         func v(_ s : String) -> Var {
-            return Var(primed: s)!
+            return Var(s)!
         }
         
         func c(_ s : String) -> Const {
-            return Const(qualified: s)!
+            return Const(s)!
         }
 
         func testConst() {
