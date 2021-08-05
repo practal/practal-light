@@ -105,7 +105,6 @@ public struct KernelContext {
         return KernelContext(parent: uuid, extensions: extensions + addExtensions, axioms: axioms + addAxioms, constants: mergedConstants)
     }
     
-    /// Adds an axiom.
     public func assume(_ term : Term, prover : Prover) -> KernelContext? {
         guard let frees = checkWellformedness(term) else { return nil }
         guard frees.isEmpty else { return nil }
