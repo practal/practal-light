@@ -82,6 +82,39 @@ public extension Term {
         return true
     }
     
+    static func fresh(_ name : Id, for term : Term) -> Var {
+        var maxPrimes = -1
+        func vcheck(_ v : Var) {
+            guard v.name == name else { return }
+            maxPrimes = max(maxPrimes, v.primes)
+        }
+        func check(_ term : Term) {
+            switch term {
+            case let .constant(_, binders: binders, params: params):
+                for b in binders { vcheck(b) }
+                for p in params { check(p) }
+            case let .variable(v, params: params):
+                vcheck(v)
+                for p in params { check(p) }
+            }
+        }
+        return Var(name: name, primes: maxPrimes + 1)
+    }
+    
+    static func replace(const : Const, with replacement : Term, in term : Term) -> Term {
+        func repl(_ term : Term) -> Term {
+            switch term {
+            case let .variable(v, params: params):
+                return .variable(v, params: params.map(repl))
+            case .constant(const, binders: [], params: []):
+                return replacement
+            case let .constant(const, binders: binders, params: params):
+                return .constant(const, binders: binders, params: params.map(repl))
+            }
+        }
+        return repl(term)
+    }
+    
     static func mk_binary(_ op : Const, _ left : Term, _ right : Term) -> Term {
         return .constant(op, binders: [], params: [left, right])
     }
@@ -121,6 +154,10 @@ public extension Term {
 
     static func mk_imp(_ left : Term, _ right : Term) -> Term {
         return mk_binary(Const.c_imp, left, right)
+    }
+    
+    static func mk_ex(_ x : Var, _ body : Term) -> Term {
+        return .constant(Const.c_ex, binders: [x], params: [body])
     }
     
     static func mk_in_Prop(_ t : Term) -> Term {

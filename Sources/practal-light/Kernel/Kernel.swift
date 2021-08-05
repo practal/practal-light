@@ -28,7 +28,7 @@ public struct KernelContext {
         case assume(Term)
         case declare(head: Head, frame: Term?)
         case define(const: Const, hyps: [Term], body: Term)
-        case choose(Const, exists: Term)
+        case choose(Const, where: Term)
     }
 
     public struct Def {
@@ -38,6 +38,8 @@ public struct KernelContext {
         public let frame : Term?
         
         public var definitions : [(hyps : [Term], body : Term)]
+        
+        public let sealed : Bool
             
     }
     
@@ -117,7 +119,7 @@ public struct KernelContext {
         return Theorem(kc_uuid: uuid, prop: prop)
     }
     
-    public func declare(head : Head, frame : Term? = nil, prover : Prover) -> KernelContext?
+    public func declare(head : Head, frame : Term? = nil, sealed : Bool, prover : Prover) -> KernelContext?
     {
         guard constants[head.const] == nil else { return nil }
         if let frame = frame {
@@ -125,12 +127,12 @@ public struct KernelContext {
             guard head.covers(frees) else { return nil }
             guard prove(prover, Term.mk_in_Prop(frame)) else { return nil }
         }
-        let def = Def(head: head, frame: frame, definitions: [])
+        let def = Def(head: head, frame: frame, definitions: [], sealed : sealed)
         return extend([.declare(head: head, frame: frame)], mergeConstants: [head.const : def])
     }
     
     public func define(const : Const, hyps : [Term], body : Term, prover : Prover) -> KernelContext? {
-        guard let def = constants[const] else { return nil }
+        guard let def = constants[const], !def.sealed else { return nil }
         for t in hyps + [body] {
             guard let frees = checkWellformedness(t) else { return nil }
             guard def.head.covers(frees) else { return nil }
@@ -145,6 +147,18 @@ public struct KernelContext {
         }
         guard prove(prover, Prop(hyp: def.frame, props)) else { return nil }
         return extend([.define(const: const, hyps: hyps, body: body)])
+    }
+    
+    public func choose(const : Const, where cond: Term, prover : Prover) -> KernelContext? {
+        guard constants[const] == nil else { return nil }
+        let fresh = Term.fresh(const.name, for: cond)
+        let replaced = Term.replace(const: const, with: .variable(fresh, params: []), in: cond)
+        let exists = Term.mk_ex(fresh, replaced)
+        guard let frees = checkWellformedness(exists), frees.isEmpty else { return nil }
+        guard prove(prover, exists) else { return nil }
+        let head = Head(const: const, binders: [], params: [])!
+        let def = Def(head: head, frame: nil, definitions: [], sealed: true)
+        return extend([.choose(const, where: cond)], addAxioms: [cond], mergeConstants: [const : def])
     }
                     
 }
