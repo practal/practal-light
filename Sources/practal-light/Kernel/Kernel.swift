@@ -40,12 +40,12 @@ public struct Prop : Hashable {
 
 public struct CProp : Hashable {
     
-    public let kernel_uuid : UUID
+    public let kc_uuid : UUID
     
     public let prop : Prop
         
-    fileprivate init(kernel_uuid : UUID, prop : Prop) {
-        self.kernel_uuid = kernel_uuid
+    fileprivate init(kc_uuid : UUID, prop : Prop) {
+        self.kc_uuid = kc_uuid
         self.prop = prop
     }
     
@@ -53,12 +53,12 @@ public struct CProp : Hashable {
 
 public struct Theorem : Hashable {
     
-    public let kernel_uuid : UUID
+    public let kc_uuid : UUID
     
     public let prop : Prop
         
-    fileprivate init(kernel_uuid : UUID, prop : Prop) {
-        self.kernel_uuid = kernel_uuid
+    fileprivate init(kc_uuid : UUID, prop : Prop) {
+        self.kc_uuid = kc_uuid
         self.prop = prop
     }
     
@@ -66,28 +66,26 @@ public struct Theorem : Hashable {
 
 public struct CTerm : Hashable {
     
-    public let kernel_uuid : UUID
+    public let kc_uuid : UUID
     
     public let term : Term
     
     public let freeVars : [Var : Int]?
         
-    fileprivate init(kernel_uuid : UUID, term : Term, freeVars : [Var : Int]?) {
-        self.kernel_uuid = kernel_uuid
+    fileprivate init(kc_uuid : UUID, term : Term, freeVars : [Var : Int]?) {
+        self.kc_uuid = kc_uuid
         self.term = term
         self.freeVars = freeVars
     }
         
     public func refl() -> Theorem {
         let prop = Prop(Term.mk_eq(term, term))
-        return Theorem(kernel_uuid: kernel_uuid, prop: prop)
+        return Theorem(kc_uuid: kc_uuid, prop: prop)
     }
         
 }
 
-public struct Kernel {
-    
-    public let uuid = UUID()
+public struct KernelContext {
     
     public typealias Prover = (CProp) -> Theorem
     
@@ -107,22 +105,26 @@ public struct Kernel {
         public var sealed : Bool
     
     }
+    
+    public let uuid : UUID
         
-    private var _axioms : [Term]
+    public let axioms : [Prop]
     
-    private var _constants : [Const : Def]
+    public let constants : [Const : Def]
     
-    private init() {
-        self._axioms = []
-        self._constants = [:]
+    private init(uuid : UUID, axioms : [Prop], constants : [Const : Def]) {
+        self.uuid = uuid
+        self.axioms = axioms
+        self.constants = constants
     }
     
     /// Certifies that `term` is wellformed.
     public func certify(_ term : Term) -> CTerm? {
         guard let fvs = checkWellformedness(term) else { return nil }
-        return CTerm(kernel_uuid: uuid, term: term, freeVars: fvs)
+        return CTerm(kc_uuid: uuid, term: term, freeVars: fvs)
     }
         
+    /*
     /// Adds an axiom.
     @discardableResult
     public mutating func assume(_ prop : CProp) -> Result {
@@ -130,24 +132,17 @@ public struct Kernel {
         let a = prop.prop.concl!
         _axioms.append(a)
         return .succeeded
-    }
-    
-    public func defOf(_ const : Const) -> Def? {
-        return _constants[const]
-    }
-    
-    public var countAxioms : Int { return _axioms.count }
-    
+    }*/
+            
     public func axiom(_ index : Int) -> Theorem {
-        let prop = Prop(_axioms[index])
-        return Theorem(kernel_uuid: uuid, prop: prop)
+        return Theorem(kc_uuid: uuid, prop: axioms[index])
     }
     
     public func ensureFreeVars(_ cterm : CTerm) -> CTerm {
         guard cterm.freeVars == nil else { return cterm }
-        guard cterm.kernel_uuid == uuid else { fatalError() }
+        guard cterm.kc_uuid == uuid else { fatalError() }
         let fvs = freeVarsOf(cterm.term)
-        return CTerm(kernel_uuid: uuid, term: cterm.term, freeVars: fvs)
+        return CTerm(kc_uuid: uuid, term: cterm.term, freeVars: fvs)
     }
             
 }

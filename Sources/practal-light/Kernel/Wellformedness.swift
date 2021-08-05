@@ -7,7 +7,7 @@
 
 import Foundation
 
-extension Kernel {
+extension KernelContext {
     
     public func checkWellformedness(_ term : Term) -> [Var : Int]? {
         var freeVars : [Var : Int] = [:]
@@ -27,7 +27,7 @@ extension Kernel {
                 }
                 return true
             case let .constant(const, binders: binders, params: params):
-                guard let head = defOf(const)?.head else {
+                guard let head = constants[const]?.head else {
                     return false
                 }
                 guard binders.count == head.binders.count else { return false }
@@ -60,7 +60,7 @@ extension Kernel {
                 }
                 freeVars[v] = params.count
             case let .constant(const, binders: binders, params: params):
-                guard let head = defOf(const)?.head else { return }
+                guard let head = constants[const]?.head else { return }
                 for (i, p) in params.enumerated() {
                     var boundVars = boundVars
                     boundVars.formUnion(head.selectBoundVars(param : i, binders : binders))
