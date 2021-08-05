@@ -7,48 +7,6 @@
 
 import Foundation
 
-public struct Prop : Hashable {
-    
-    public var hyps : [Term]
-    
-    public var concls : [Term]
-
-    public init(hyps : [Term] = [], _ concls : [Term]) {
-        self.hyps = hyps
-        self.concls = concls
-    }
-    
-    public init(hyps : [Term] = [], _ concl : Term) {
-        self.hyps = hyps
-        self.concls = [concl]
-    }
-    
-    public var hasHyps : Bool {
-        return !hyps.isEmpty
-    }
-    
-    public var concl : Term? {
-        guard concls.count == 1 else { return nil }
-        return concls.first!
-    }
-    
-    public var isSimple : Bool {
-        return hyps.isEmpty && concls.count == 1
-    }
-    
-    public func mkSimple() -> Prop {
-        if isSimple { return self }
-        let Concl = Term.mk_ands(concls)
-        if hyps.isEmpty {
-            return Prop(Concl)
-        } else {
-            let Hyp = Term.mk_ands(hyps)
-            return Prop(Term.mk_imp(Hyp, Concl))
-        }
-    }
-    
-}
-
 public struct Theorem : Hashable {
     
     public let kc_uuid : UUID
@@ -86,26 +44,38 @@ public struct KernelContext {
     
     public let uuid : UUID
 
-    public let extends : (parent: UUID, extensions: [KCExt])?
+    public let parent : UUID?
+    
+    public let extensions : [KCExt]
             
     public let axioms : [Term]
     
     public let constants : [Const : Def]
     
-    private init(uuid : UUID = UUID(), parent: UUID, extensions: [KCExt], axioms : [Term], constants : [Const : Def]) {
-        self.extends = (parent, extensions)
+    private init(uuid : UUID = UUID(), parent: UUID?, extensions: [KCExt], axioms : [Term], constants : [Const : Def]) {
+        self.parent = parent
+        self.extensions = extensions
         self.uuid = uuid
         self.axioms = axioms
         self.constants = constants
     }
-    
-    private init(uuid : UUID = UUID()) {
-        self.extends = nil
-        self.uuid = uuid
-        self.axioms = []
-        self.constants = [:]
-    }
         
+    public init?<S:Collection>(squash contexts: S) where S.Element == KernelContext {
+        guard !contexts.isEmpty else { return nil }
+        var exts : [KCExt] = []
+        var last : KernelContext? = nil
+        for context in contexts {
+            guard last == nil || last!.uuid == context.parent else { return nil }
+            exts.append(contentsOf: context.extensions)
+            last = context
+        }
+        self.parent = contexts.first!.parent
+        self.uuid = last!.uuid
+        self.axioms = last!.axioms
+        self.constants = last!.constants
+        self.extensions = exts
+    }
+            
     public func refl(_ term : Term) -> Theorem? {
         guard isWellformed(term) else { return nil }
         let prop = Prop(Term.mk_eq(term, term))
@@ -124,13 +94,11 @@ public struct KernelContext {
     }
     
     private func extend(_ addExtensions : [KCExt] = [], _ addAxioms : [Term] = [], _ mergeConstants : [Const : Def] = [:]) -> KernelContext {
-        let addedExtensions = (extends?.extensions ?? []) + addExtensions
         let mergedConstants = constants.merging(mergeConstants) { old, new in new }
-        return KernelContext(parent: uuid, extensions: addedExtensions, axioms: axioms + addAxioms, constants: mergedConstants)
+        return KernelContext(parent: uuid, extensions: extensions + addExtensions, axioms: axioms + addAxioms, constants: mergedConstants)
     }
     
     /// Adds an axiom.
-    @discardableResult
     public mutating func assume(_ term : Term, prover : Prover) -> KernelContext? {
         guard let frees = checkWellformedness(term) else { return nil }
         guard frees.isEmpty else { return nil }
@@ -143,4 +111,39 @@ public struct KernelContext {
         return Theorem(kc_uuid: uuid, prop: prop)
     }
                 
+}
+
+public struct KCChain {
+    
+    private var _contexts : [KernelContext]
+        
+    public init(_ contexts : KernelContext...) {
+        self._contexts = contexts
+    }
+    
+    public var contexts : [KernelContext] {
+        return _contexts
+    }
+    
+    @discardableResult
+    public mutating func append(_ context : KernelContext) -> Bool {
+        if let last = _contexts.first {
+            guard context.parent == last.uuid else { return false }
+            _contexts.append(context)
+            return true
+        } else {
+            _contexts = [context]
+            return true
+        }
+    }
+    
+    public mutating func squash(from : Int? = nil, to : Int? = nil) -> KernelContext? {
+        let from = from ?? 0
+        let to = to ?? _contexts.count
+        guard from < to && from >= 0 && to <= contexts.count else { return nil }
+        guard let squashed = KernelContext(squash: _contexts[from ..< to]) else { return nil }
+        _contexts[from ..< to] = [squashed]
+        return squashed
+    }
+    
 }
