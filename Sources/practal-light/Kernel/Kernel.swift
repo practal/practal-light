@@ -99,7 +99,7 @@ public struct KernelContext {
     }
     
     /// Adds an axiom.
-    public mutating func assume(_ term : Term, prover : Prover) -> KernelContext? {
+    public func assume(_ term : Term, prover : Prover) -> KernelContext? {
         guard let frees = checkWellformedness(term) else { return nil }
         guard frees.isEmpty else { return nil }
         guard prove(prover, Term.mk_in_Prop(term)) else { return nil }
