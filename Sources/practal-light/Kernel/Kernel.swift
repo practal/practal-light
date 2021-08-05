@@ -20,18 +20,18 @@ public struct Theorem : Hashable {
     
 }
 
-public enum KCExt {
-    case assume(Term)
-    case declare(head: Head)
-    case narrow(const: Const, frame: Term)
-    case define(const: Const, hyps: [Term], body: Term)
-    case choose(Const, exists: Term)
-}
-
 public struct KernelContext {
     
     public typealias Prover = (KernelContext, Prop) -> Theorem?
         
+    public enum Ext {
+        case assume(Term)
+        case declare(head: Head)
+        case narrow(const: Const, frame: Term)
+        case define(const: Const, hyps: [Term], body: Term)
+        case choose(Const, exists: Term)
+    }
+
     public struct Def {
         
         public var head : Head
@@ -46,13 +46,13 @@ public struct KernelContext {
 
     public let parent : UUID?
     
-    public let extensions : [KCExt]
+    public let extensions : [Ext]
             
     public let axioms : [Term]
     
     public let constants : [Const : Def]
     
-    private init(uuid : UUID = UUID(), parent: UUID?, extensions: [KCExt], axioms : [Term], constants : [Const : Def]) {
+    private init(uuid : UUID = UUID(), parent: UUID?, extensions: [Ext], axioms : [Term], constants : [Const : Def]) {
         self.parent = parent
         self.extensions = extensions
         self.uuid = uuid
@@ -62,7 +62,7 @@ public struct KernelContext {
         
     public init?<S:Collection>(squash contexts: S) where S.Element == KernelContext {
         guard !contexts.isEmpty else { return nil }
-        var exts : [KCExt] = []
+        var exts : [Ext] = []
         var last : KernelContext? = nil
         for context in contexts {
             guard last == nil || last!.uuid == context.parent else { return nil }
@@ -93,7 +93,7 @@ public struct KernelContext {
         return prop == th.prop
     }
     
-    private func extend(_ addExtensions : [KCExt] = [], _ addAxioms : [Term] = [], _ mergeConstants : [Const : Def] = [:]) -> KernelContext {
+    private func extend(_ addExtensions : [Ext] = [], _ addAxioms : [Term] = [], _ mergeConstants : [Const : Def] = [:]) -> KernelContext {
         let mergedConstants = constants.merging(mergeConstants) { old, new in new }
         return KernelContext(parent: uuid, extensions: extensions + addExtensions, axioms: axioms + addAxioms, constants: mergedConstants)
     }
