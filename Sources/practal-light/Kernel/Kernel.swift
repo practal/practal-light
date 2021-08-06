@@ -28,6 +28,7 @@ public struct KernelContext {
         case assume(Term)
         case declare(head: Head, frame: Term?)
         case define(const: Const, hyps: [Term], body: Term)
+        case seal(const: Const)
         case choose(Const, where: Term)
     }
 
@@ -39,7 +40,7 @@ public struct KernelContext {
         
         public var definitions : [(hyps : [Term], body : Term)]
         
-        public let sealed : Bool
+        public var sealed : Bool
             
     }
     
@@ -119,16 +120,24 @@ public struct KernelContext {
         return Theorem(kc_uuid: uuid, prop: prop)
     }
     
-    public func declare(head : Head, frame : Term? = nil, sealed : Bool, prover : Prover) -> KernelContext?
+    public func declare(head : Head, frame : Term? = nil, prover : Prover) -> KernelContext?
     {
         guard constants[head.const] == nil else { return nil }
+        var addAxioms : [Term] = []
         if let frame = frame {
             guard let frees = checkWellformedness(frame) else { return nil }
             guard head.covers(frees) else { return nil }
             guard prove(prover, Term.mk_in_Prop(frame)) else { return nil }
+            addAxioms.append(Term.mk_imp(Term.mk_not(frame), Term.mk_undefined(head.term)))
         }
-        let def = Def(head: head, frame: frame, definitions: [], sealed : sealed)
-        return extend([.declare(head: head, frame: frame)], mergeConstants: [head.const : def])
+        let def = Def(head: head, frame: frame, definitions: [], sealed : false)
+        return extend([.declare(head: head, frame: frame)], addAxioms: addAxioms, mergeConstants: [head.const : def])
+    }
+    
+    public func seal(const : Const) -> KernelContext? {
+        guard var def = constants[const], !def.sealed else { return nil }
+        def.sealed = true
+        return extend([.seal(const: const)], mergeConstants: [const : def])
     }
     
     public func define(const : Const, hyps : [Term], body : Term, prover : Prover) -> KernelContext? {
@@ -146,19 +155,55 @@ public struct KernelContext {
             props.append(compatible.flatten())
         }
         guard prove(prover, Prop(hyp: def.frame, props)) else { return nil }
-        return extend([.define(const: const, hyps: hyps, body: body)])
+        let ax = Prop(hyp: def.frame, Prop(hyps: hyps, Term.mk_eq(def.head.term, body)).flatten()).flatten()
+        return extend([.define(const: const, hyps: hyps, body: body)], addAxioms: [ax])
     }
     
     public func choose(const : Const, where cond: Term, prover : Prover) -> KernelContext? {
         guard constants[const] == nil else { return nil }
         let fresh = Term.fresh(const.name, for: cond)
-        let replaced = Term.replace(const: const, with: .variable(fresh, params: []), in: cond)
+        let replaced = Term.replace(const: const, with: fresh, in: cond)
         let exists = Term.mk_ex(fresh, replaced)
         guard let frees = checkWellformedness(exists), frees.isEmpty else { return nil }
         guard prove(prover, exists) else { return nil }
         let head = Head(const: const, binders: [], params: [])!
         let def = Def(head: head, frame: nil, definitions: [], sealed: true)
         return extend([.choose(const, where: cond)], addAxioms: [cond], mergeConstants: [const : def])
+    }
+    
+    public static func lift(_ th : Theorem, in chain : KCChain, from : Int, to : Int) -> Theorem? {
+        guard chain.isValidIndex(from) && chain.isValidIndex(to) else { return nil }
+        guard chain[from].uuid == th.kc_uuid else { return nil }
+        if from == to { return th }
+        else if from < to  {
+            return Theorem(kc_uuid: chain[to].uuid, prop: th.prop)
+        } else {
+            var current = th.prop.flatten()
+            let exts = chain.extensions(from: to+1, to: from)
+            var i = exts.count - 1
+            while i >= 0 {
+                switch exts[i] {
+                case let .assume(hyp):
+                    current = Term.mk_imp(hyp, current)
+                case let .choose(c, where: _):
+                    if current.arityOf(const: c) != nil {
+                        let v = Term.fresh(c.name, for: current)
+                        current = Term.mk_ex(v, Term.replace(const: c, with: v, in: current))
+                    }
+                case let .declare(head: head, frame: frame):
+                    let c = head.const
+                    if let arity = current.arityOf(const: c) {
+                        guard arity.binders == 0 else { return nil }
+                        let v = Term.fresh(c.name, for: current)
+                        current = Term.replace(const: c, with: v, in: current)
+                    }
+                default:
+                    return nil
+                }
+                i -= 1
+            }
+            return Theorem(kc_uuid: chain[to].uuid, prop: Prop(current))
+        }
     }
                     
 }

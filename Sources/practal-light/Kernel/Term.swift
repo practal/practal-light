@@ -101,13 +101,13 @@ public extension Term {
         return Var(name: name, primes: maxPrimes + 1)
     }
     
-    static func replace(const : Const, with replacement : Term, in term : Term) -> Term {
+    static func replace(const : Const, with w : Var, in term : Term) -> Term {
         func repl(_ term : Term) -> Term {
             switch term {
             case let .variable(v, params: params):
                 return .variable(v, params: params.map(repl))
-            case .constant(const, binders: [], params: []):
-                return replacement
+            case let .constant(const, binders: [], params: params):
+                return .variable(w, params: params.map { p in replace(const: const, with: w, in: p) })
             case let .constant(const, binders: binders, params: params):
                 return .constant(const, binders: binders, params: params.map(repl))
             }
@@ -115,8 +115,35 @@ public extension Term {
         return repl(term)
     }
     
+    func arityOf(const : Const) -> (binders: Int, params: Int)? {
+        switch self {
+        case let .constant(c, binders: binders, params: params):
+            if c == const {
+                return (binders: binders.count, params: params.count)
+            } else {
+                for p in params {
+                    if let arity = p.arityOf(const: const) {
+                        return arity
+                    }
+                }
+                return nil
+            }
+        case let .variable(_, params: params):
+            for p in params {
+                if let arity = p.arityOf(const: const) {
+                    return arity
+                }
+            }
+            return nil
+        }
+    }
+    
     static func mk_binary(_ op : Const, _ left : Term, _ right : Term) -> Term {
         return .constant(op, binders: [], params: [left, right])
+    }
+    
+    static func mk_unary(_ op : Const, _ arg : Term) -> Term {
+        return .constant(op, binders: [], params: [arg])
     }
     
     static func mk_nullary(_ op : Const) -> Term {
@@ -129,6 +156,18 @@ public extension Term {
     
     static func mk_eq(_ left : Term, _ right : Term) -> Term {
         return mk_binary(Const.c_eq, left, right)
+    }
+
+    static func mk_not(_ prop : Term) -> Term {
+        return mk_unary(.c_not, prop)
+    }
+    
+    static func mk_defined(_ term : Term) -> Term {
+        return mk_unary(.c_defined, term)
+    }
+
+    static func mk_undefined(_ term : Term) -> Term {
+        return mk_unary(.c_undefined, term)
     }
 
     static func mk_and(_ left : Term, _ right : Term) -> Term {

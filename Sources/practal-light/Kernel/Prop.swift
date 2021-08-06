@@ -60,4 +60,8 @@ public struct Prop : Hashable {
         }
     }
     
+    public mutating func add(hyp : Term) {
+        hyps.append(hyp)
+    }
+    
 }

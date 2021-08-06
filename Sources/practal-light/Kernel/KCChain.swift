@@ -33,11 +33,27 @@ public struct KCChain {
     
     public mutating func squash(from : Int? = nil, to : Int? = nil) -> KernelContext? {
         let from = from ?? 0
-        let to = to ?? _contexts.count
-        guard from < to && from >= 0 && to <= contexts.count else { return nil }
-        guard let squashed = KernelContext(squash: _contexts[from ..< to]) else { return nil }
-        _contexts[from ..< to] = [squashed]
+        let to = to ?? _contexts.count - 1
+        guard isValidIndex(from) && isValidIndex(to) else { return nil }
+        guard let squashed = KernelContext(squash: _contexts[from ... to]) else { return nil }
+        _contexts[from ... to] = [squashed]
         return squashed
+    }
+    
+    public func isValidIndex(_ i : Int) -> Bool {
+        return i >= 0 && i < contexts.count
+    }
+    
+    public subscript(_ index : Int) -> KernelContext {
+        return contexts[index]
+    }
+    
+    internal func extensions(from : Int, to : Int) -> [KernelContext.Ext] {
+        var exts : [KernelContext.Ext] = []
+        for i in from ... to {
+            exts.append(contentsOf: contexts[i].extensions)
+        }
+        return exts
     }
     
 }
