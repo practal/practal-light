@@ -26,7 +26,7 @@ public struct KernelContext {
         
     public enum Ext {
         case assume(Term)
-        case declare(head: Head, frame: Term?)
+        case declare(head: Head)
         case define(const: Const, hyps: [Term], body: Term)
         case seal(const: Const)
         case choose(Const, where: Term)
@@ -35,9 +35,7 @@ public struct KernelContext {
     public struct Def {
         
         public let head : Head
-        
-        public let frame : Term?
-        
+                
         public var definitions : [(hyps : [Term], body : Term)]
         
         public var sealed : Bool
@@ -120,18 +118,11 @@ public struct KernelContext {
         return Theorem(kc_uuid: uuid, prop: prop)
     }
     
-    public func declare(head : Head, frame : Term? = nil, prover : Prover) -> KernelContext?
+    public func declare(head : Head, prover : Prover) -> KernelContext?
     {
         guard constants[head.const] == nil else { return nil }
-        var addAxioms : [Term] = []
-        if let frame = frame {
-            guard let frees = checkWellformedness(frame) else { return nil }
-            guard head.covers(frees) else { return nil }
-            guard prove(prover, Term.mk_in_Prop(frame)) else { return nil }
-            addAxioms.append(Term.mk_imp(Term.mk_not(frame), Term.mk_undefined(head.term)))
-        }
-        let def = Def(head: head, frame: frame, definitions: [], sealed : false)
-        return extend([.declare(head: head, frame: frame)], addAxioms: addAxioms, mergeConstants: [head.const : def])
+        let def = Def(head: head, definitions: [], sealed : false)
+        return extend([.declare(head: head)], mergeConstants: [head.const : def])
     }
     
     public func seal(const : Const) -> KernelContext? {
@@ -154,9 +145,15 @@ public struct KernelContext {
             let compatible = Prop(hyps: d.hyps + hyps, Term.mk_eq(d.body, body))
             props.append(compatible.flatten())
         }
-        guard prove(prover, Prop(hyp: def.frame, props)) else { return nil }
-        let ax = Prop(hyp: def.frame, Prop(hyps: hyps, Term.mk_eq(def.head.term, body)).flatten()).flatten()
+        guard prove(prover, Prop(props)) else { return nil }
+        let ax = Prop(hyps: hyps, Term.mk_eq(def.head.term, body)).flatten()
         return extend([.define(const: const, hyps: hyps, body: body)], addAxioms: [ax])
+    }
+    
+    public func setDomain(const : Const, domain : Term, prover : Prover) -> KernelContext? {
+        let hyp = Term.mk_not(domain)
+        let body = Term.c_nil
+        return define(const: const, hyps: [hyp], body: body, prover: prover)
     }
     
     public func choose(const : Const, where cond: Term, prover : Prover) -> KernelContext? {
@@ -167,7 +164,7 @@ public struct KernelContext {
         guard let frees = checkWellformedness(exists), frees.isEmpty else { return nil }
         guard prove(prover, exists) else { return nil }
         let head = Head(const: const, binders: [], params: [])!
-        let def = Def(head: head, frame: nil, definitions: [], sealed: true)
+        let def = Def(head: head, definitions: [], sealed: true)
         return extend([.choose(const, where: cond)], addAxioms: [cond], mergeConstants: [const : def])
     }
     
@@ -190,7 +187,7 @@ public struct KernelContext {
                         let v = Term.fresh(c.name, for: current)
                         current = Term.mk_ex(v, Term.replace(const: c, with: v, in: current))
                     }
-                case let .declare(head: head, frame: frame):
+                case let .declare(head: head):
                     let c = head.const
                     if let arity = current.arityOf(const: c) {
                         guard arity.binders == 0 else { return nil }

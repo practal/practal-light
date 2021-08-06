@@ -150,9 +150,10 @@ public extension Term {
         return .constant(op, binders: [], params: [])
     }
     
-    static let c_true : Term = mk_nullary(.c_true)
-    
-    static let c_Prop : Term = mk_nullary(.c_Prop)
+    static let c_true = mk_nullary(.c_true)
+    static let c_false = mk_nullary(.c_false)
+    static let c_nil = mk_nullary(.c_nil)
+    static let c_Prop = mk_nullary(.c_Prop)
     
     static func mk_eq(_ left : Term, _ right : Term) -> Term {
         return mk_binary(Const.c_eq, left, right)

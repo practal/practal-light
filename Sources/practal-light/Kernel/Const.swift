@@ -53,6 +53,7 @@ public struct Const : Hashable, CustomStringConvertible {
     
     public static let c_undefined = mkC("undefined")
     public static let c_defined = mkC("defined")
+    public static let c_nil = mkC("nil")
 
     public static let c_ex = mkC("ex")
     public static let c_all = mkC("all")
