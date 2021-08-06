@@ -138,6 +138,10 @@ public extension Term {
         }
     }
     
+    func contains(const : Const) -> Bool {
+        return arityOf(const: const) != nil
+    }
+    
     static func mk_binary(_ op : Const, _ left : Term, _ right : Term) -> Term {
         return .constant(op, binders: [], params: [left, right])
     }

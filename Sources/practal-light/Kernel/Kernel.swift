@@ -168,6 +168,24 @@ public struct KernelContext {
         return extend([.choose(const, where: cond)], addAxioms: [cond], mergeConstants: [const : def])
     }
     
+    private static func findOpeningDeclaration(const : Const, from : Int, extensions : [Ext]) -> Int? {
+        var i = from
+        while i >= 0 {
+            switch extensions[i] {
+            case .assume, .choose: return nil
+            case let .seal(c):
+                if c != const { return nil }
+            case let .declare(head: head):
+                if head.const != const { return nil }
+                else { return i }
+            case let .define(const: c, hyps: _, body: _):
+                if c != const { return nil }
+            }
+            i -= 1
+        }
+        return nil
+    }
+    
     public static func lift(_ th : Theorem, in chain : KCChain, from : Int, to : Int) -> Theorem? {
         guard chain.isValidIndex(from) && chain.isValidIndex(to) else { return nil }
         guard chain[from].uuid == th.kc_uuid else { return nil }
@@ -184,7 +202,7 @@ public struct KernelContext {
                 case let .assume(hyp):
                     current = Term.mk_imp(hyp, current)
                 case let .choose(c, where: _):
-                    if current.arityOf(const: c) != nil {
+                    if current.contains(const: c) {
                         let v = Term.fresh(c.name, for: current)
                         current = Term.mk_ex(v, Term.replace(const: c, with: v, in: current))
                     }
@@ -203,8 +221,10 @@ public struct KernelContext {
                         d = Term.mk_all(x, d)
                     }
                     current = Term.mk_imp(d, current)
-                default:
-                    return nil
+                case let .seal(const: const):
+                    if !current.contains(const: const), let declIndex = findOpeningDeclaration(const: const, from: i, extensions: exts) {
+                        i = declIndex
+                    }
                 }
                 i -= 1
             }
