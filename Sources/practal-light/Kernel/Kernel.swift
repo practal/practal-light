@@ -20,23 +20,32 @@ public struct Theorem : Hashable {
     
 }
 
-public struct KernelContext {
+public struct KernelContext : Hashable {
     
     public typealias Prover = (KernelContext, Prop) -> Theorem?
         
-    public enum Ext {
+    public enum Ext : Hashable {
         case assume(Term)
         case declare(head: Head)
         case define(const: Const, hyps: [Term], body: Term)
         case seal(const: Const)
         case choose(Const, where: Term)
+        case join(parents : [UUID])
     }
 
-    public struct Def {
+    public struct DefCase : Hashable {
+        
+        public let hyps : [Term]
+    
+        public let body : Term
+        
+    }
+    
+    public struct Def : Hashable {
         
         public let head : Head
                 
-        public var definitions : [(hyps : [Term], body : Term)]
+        public var definitions : [DefCase]
         
         public var sealed : Bool
             
@@ -132,7 +141,7 @@ public struct KernelContext {
     }
     
     public func define(const : Const, hyps : [Term], body : Term, prover : Prover) -> KernelContext? {
-        guard let def = constants[const], !def.sealed else { return nil }
+        guard var def = constants[const], !def.sealed else { return nil }
         for t in hyps + [body] {
             guard let frees = checkWellformedness(t) else { return nil }
             guard def.head.covers(frees) else { return nil }
@@ -147,7 +156,8 @@ public struct KernelContext {
         }
         guard prove(prover, Prop(props)) else { return nil }
         let ax = Prop(hyps: hyps, Term.mk_eq(def.head.term, body)).flatten()
-        return extend([.define(const: const, hyps: hyps, body: body)], addAxioms: [ax])
+        def.definitions.append(DefCase(hyps: hyps, body: body))
+        return extend([.define(const: const, hyps: hyps, body: body)], addAxioms: [ax], mergeConstants: [const: def])
     }
     
     public func define(const : Const, domain : Term, prover : Prover) -> KernelContext? {
@@ -168,11 +178,32 @@ public struct KernelContext {
         return extend([.choose(const, where: cond)], addAxioms: [cond], mergeConstants: [const : def])
     }
     
+    public static func join(parents : [KernelContext]) -> KernelContext? {
+        var axioms : [Term] = []
+        var constants : [Const : Def] = [:]
+        for parent in parents {
+            for (const, def) in parent.constants {
+                if let d = constants[const] {
+                    guard d == def else { return nil }
+                } else {
+                    constants[const] = def
+                }
+            }
+            for axiom in parent.axioms {
+                if !axioms.contains(axiom) {
+                    axioms.append(axiom)
+                }
+            }
+        }
+        let extensions : [Ext] = [.join(parents: parents.map { p in p.uuid})]
+        return KernelContext(parent: nil, extensions: extensions, axioms: axioms, constants: constants)
+    }
+    
     private static func findOpeningDeclaration(const : Const, from : Int, extensions : [Ext]) -> Int? {
         var i = from
         while i >= 0 {
             switch extensions[i] {
-            case .assume, .choose: return nil
+            case .assume, .choose, .join: return nil
             case let .seal(c):
                 if c != const { return nil }
             case let .declare(head: head):
@@ -225,6 +256,7 @@ public struct KernelContext {
                     if !current.contains(const: const), let declIndex = findOpeningDeclaration(const: const, from: i, extensions: exts) {
                         i = declIndex
                     }
+                case .join: break
                 }
                 i -= 1
             }
