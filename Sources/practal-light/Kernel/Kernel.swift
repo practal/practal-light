@@ -150,7 +150,7 @@ public struct KernelContext {
         return extend([.define(const: const, hyps: hyps, body: body)], addAxioms: [ax])
     }
     
-    public func setDomain(const : Const, domain : Term, prover : Prover) -> KernelContext? {
+    public func define(const : Const, domain : Term, prover : Prover) -> KernelContext? {
         let hyp = Term.mk_not(domain)
         let body = Term.c_nil
         return define(const: const, hyps: [hyp], body: body, prover: prover)
