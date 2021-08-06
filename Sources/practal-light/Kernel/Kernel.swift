@@ -177,6 +177,7 @@ public struct KernelContext {
         } else {
             var current = th.prop.flatten()
             let exts = chain.extensions(from: to+1, to: from)
+            let constants = chain[from].constants
             var i = exts.count - 1
             while i >= 0 {
                 switch exts[i] {
@@ -194,6 +195,14 @@ public struct KernelContext {
                         let v = Term.fresh(c.name, for: current)
                         current = Term.replace(const: c, with: v, in: current)
                     }
+                case let .define(const: const, hyps: hyps, body: body):
+                    guard let head = constants[const]?.head, head.binders.count == 0  else { return nil }
+                    var d = Prop(hyps: hyps, [Term.mk_eq(head.term, body)]).flatten()
+                    for param in head.params.reversed() {
+                        let x = param.unappliedVar!
+                        d = Term.mk_all(x, d)
+                    }
+                    current = Term.mk_imp(d, current)
                 default:
                     return nil
                 }

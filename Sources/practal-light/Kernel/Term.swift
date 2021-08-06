@@ -200,6 +200,10 @@ public extension Term {
         return .constant(Const.c_ex, binders: [x], params: [body])
     }
     
+    static func mk_all(_ x : Var, _ body : Term) -> Term {
+        return .constant(Const.c_all, binders: [x], params: [body])
+    }
+
     static func mk_in_Prop(_ t : Term) -> Term {
         return mk_binary(Const.c_in, t, c_Prop)
     }
