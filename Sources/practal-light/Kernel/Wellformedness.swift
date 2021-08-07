@@ -32,9 +32,7 @@ extension KernelContext {
                 guard let head = constants[const]?.head else {
                     return false
                 }
-                guard binders.count == head.binders.count else { return false }
-                guard binders.count == Set(binders).count else { return false }
-                guard params.count == head.params.count else { return false }
+                guard head.checkShape(binders, params) else { return false }
                 for (i, p) in params.enumerated() {
                     var boundVars = boundVars
                     boundVars.formUnion(head.selectBoundVars(param : i, binders : binders))

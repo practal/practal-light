@@ -94,7 +94,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         guard isValid(th) else {
             return false
         }
-        return prop == th.prop
+        return alpha_equivalent(prop, th.prop)
     }
 
     private func prove(_ prover : Prover, _ prop : Term) -> Bool {

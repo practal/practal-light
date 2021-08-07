@@ -97,4 +97,11 @@ public struct Head : Hashable, CustomStringConvertible {
         return term.description
     }
     
+    public func checkShape(_ otherBinders : [Var], _ otherParams : [Term]) -> Bool {
+        return
+            otherBinders.count == binders.count &&
+            Set(otherBinders).count == otherBinders.count &&
+            otherParams.count == params.count
+    }
+    
 }
