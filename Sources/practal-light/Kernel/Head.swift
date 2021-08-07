@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Head : Hashable {
+public struct Head : Hashable, CustomStringConvertible {
     
     public let const : Const
     
@@ -91,6 +91,10 @@ public struct Head : Hashable {
         case .constant: fatalError()
         }
         return vars
+    }
+    
+    public var description: String {
+        return term.description
     }
     
 }

@@ -348,4 +348,10 @@
             axiom("(⊤ ⟶ ⊥) = ⊥")
             axiom("(⊤ ⟶ nil) = ⊥")
         }
+        
+        func testKernelContext() {
+            let kc = KernelContext.root()
+            print("constants = \(kc.constants)")
+            print("axioms = \(kc.axioms)")
+        }
     }

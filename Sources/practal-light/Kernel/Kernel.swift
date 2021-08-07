@@ -121,7 +121,7 @@ public struct KernelContext : Hashable {
         return Theorem(kc_uuid: uuid, prop: prop)
     }
     
-    public func declare(head : Head, prover : Prover) -> KernelContext?
+    public func declare(head : Head) -> KernelContext?
     {
         guard constants[head.const] == nil else { return nil }
         let def = Def(head: head, definitions: [], sealed : false)
@@ -253,7 +253,25 @@ public struct KernelContext : Hashable {
     }
     
     public static func root() -> KernelContext {
-        let kc = KernelContext(parent: nil, extensions: [], axioms: [], constants: [:])
+        var kc = KernelContext(parent: nil, extensions: [], axioms: [], constants: [:])
+        func introduce(_ const : Const, binders : [Var] = [], params : Term...) {
+            kc = kc.declare(head: .init(const: const, binders: binders, params: params)!)!
+            kc = kc.seal(const: const)!
+        }
+        func v(_ name : String) -> Var {
+            return Var(name)!
+        }
+        func tv(_ name : String, _ params : Term...) -> Term {
+            return .variable(Var(name)!, params: params)
+        }
+        introduce(.c_true)
+        introduce(.c_Prop)
+        introduce(.c_eq, params: tv("x"), tv("y"))
+        introduce(.c_in, params: tv("x"), tv("T"))
+        introduce(.c_and, params: tv("p"), tv("q"))
+        introduce(.c_imp, params: tv("p"), tv("q"))
+        introduce(.c_ex, binders: [v("x")], params: tv("P", tv("x")))
+        introduce(.c_all, binders: [v("x")], params: tv("P", tv("x")))
         return kc
     }
                     
