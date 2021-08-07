@@ -84,13 +84,7 @@ public struct KernelContext : Hashable {
         self.constants = last!.constants
         self.extensions = exts
     }
-            
-    public func refl(_ term : Term) -> Theorem? {
-        guard isWellformed(term) else { return nil }
-        let prop = Prop(Term.mk_eq(term, term))
-        return Theorem(kc_uuid: uuid, prop: prop)
-    }
-    
+                
     public func isValid(_ th : Theorem) -> Bool {
         return th.kc_uuid == uuid
     }
