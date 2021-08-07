@@ -45,15 +45,8 @@ public struct Const : Hashable, CustomStringConvertible {
     public static let c_in = mkC("in")
 
     public static let c_true = mkC("true")
-    public static let c_false = mkC("false")
     public static let c_and = mkC("and")
-    public static let c_or = mkC("or")
     public static let c_imp = mkC("imp")
-    public static let c_not = mkC("not")
-    
-    public static let c_undefined = mkC("undefined")
-    public static let c_defined = mkC("defined")
-    public static let c_nil = mkC("nil")
 
     public static let c_ex = mkC("ex")
     public static let c_all = mkC("all")

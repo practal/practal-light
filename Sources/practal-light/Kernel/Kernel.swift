@@ -159,13 +159,7 @@ public struct KernelContext : Hashable {
         def.definitions.append(DefCase(hyps: hyps, body: body))
         return extend([.define(const: const, hyps: hyps, body: body)], addAxioms: [ax], mergeConstants: [const: def])
     }
-    
-    public func define(const : Const, domain : Term, prover : Prover) -> KernelContext? {
-        let hyp = Term.mk_not(domain)
-        let body = Term.c_nil
-        return define(const: const, hyps: [hyp], body: body, prover: prover)
-    }
-    
+        
     public func choose(const : Const, where cond: Term, prover : Prover) -> KernelContext? {
         guard constants[const] == nil else { return nil }
         let fresh = Term.fresh(const.name, for: cond)

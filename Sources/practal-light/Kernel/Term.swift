@@ -155,24 +155,11 @@ public extension Term {
     }
     
     static let c_true = mk_nullary(.c_true)
-    static let c_false = mk_nullary(.c_false)
-    static let c_nil = mk_nullary(.c_nil)
+
     static let c_Prop = mk_nullary(.c_Prop)
     
     static func mk_eq(_ left : Term, _ right : Term) -> Term {
         return mk_binary(Const.c_eq, left, right)
-    }
-
-    static func mk_not(_ prop : Term) -> Term {
-        return mk_unary(.c_not, prop)
-    }
-    
-    static func mk_defined(_ term : Term) -> Term {
-        return mk_unary(.c_defined, term)
-    }
-
-    static func mk_undefined(_ term : Term) -> Term {
-        return mk_unary(.c_undefined, term)
     }
 
     static func mk_and(_ left : Term, _ right : Term) -> Term {
@@ -190,10 +177,6 @@ public extension Term {
             }
             return ands
         }
-    }
-
-    static func mk_or(_ left : Term, _ right : Term) -> Term {
-        return mk_binary(Const.c_or, left, right)
     }
 
     static func mk_imp(_ left : Term, _ right : Term) -> Term {
