@@ -20,7 +20,7 @@ public struct Theorem : Hashable {
     
 }
 
-public struct KernelContext : Hashable {
+public struct KernelContext : Hashable, CustomStringConvertible {
     
     public typealias Prover = (KernelContext, Prop) -> Theorem?
         
@@ -90,9 +90,10 @@ public struct KernelContext : Hashable {
     }
     
     private func prove(_ prover : Prover, _ prop : Prop) -> Bool {
-        if prop.concls.isEmpty { return true }
         guard let th = prover(self, prop) else { return false }
-        guard isValid(th) else { return false }
+        guard isValid(th) else {
+            return false
+        }
         return prop == th.prop
     }
 
@@ -110,8 +111,7 @@ public struct KernelContext : Hashable {
     }
     
     public func assume(_ term : Term, prover : Prover) -> KernelContext? {
-        guard let frees = checkWellformedness(term) else { return nil }
-        guard frees.isEmpty else { return nil }
+        guard isWellformed(term) else { return nil }
         guard prove(prover, Term.mk_in_Prop(term)) else { return nil }
         return extend([.assume(term)], addAxioms: [term])
     }
@@ -137,7 +137,7 @@ public struct KernelContext : Hashable {
     public func define(const : Const, hyps : [Term], body : Term, prover : Prover) -> KernelContext? {
         guard var def = constants[const], !def.sealed else { return nil }
         for t in hyps + [body] {
-            guard let frees = checkWellformedness(t) else { return nil }
+            guard let frees = checkWellformedness(t)?.arity else { return nil }
             guard def.head.covers(frees) else { return nil }
         }
         var props : [Term] = []
@@ -159,7 +159,7 @@ public struct KernelContext : Hashable {
         let fresh = Term.fresh(const.name, for: cond)
         let replaced = Term.replace(const: const, with: fresh, in: cond)
         let exists = Term.mk_ex(fresh, replaced)
-        guard let frees = checkWellformedness(exists), frees.isEmpty else { return nil }
+        guard let frees = checkWellformedness(exists)?.arity, frees.isEmpty else { return nil }
         guard prove(prover, exists) else { return nil }
         let head = Head(const: const, binders: [], params: [])!
         let def = Def(head: head, definitions: [], sealed: true)
@@ -219,7 +219,11 @@ public struct KernelContext : Hashable {
             while i >= 0 {
                 switch exts[i] {
                 case let .assume(hyp):
-                    current = Term.mk_imp(hyp, current)
+                    let (frees, arity) = chain[from].freeVarsOf(hyp)
+                    for (_, a) in arity {
+                        if a != 0 { return nil }
+                    }
+                    current = Term.mk_imp(Term.mk_all(frees, hyp), current)
                 case let .choose(c, where: _):
                     if current.contains(const: c) {
                         let v = Term.fresh(c.name, for: current)
@@ -234,12 +238,9 @@ public struct KernelContext : Hashable {
                     }
                 case let .define(const: const, hyps: hyps, body: body):
                     guard let head = constants[const]?.head, head.binders.count == 0  else { return nil }
-                    var d = Prop(hyps: hyps, [Term.mk_eq(head.term, body)]).flatten()
-                    for param in head.params.reversed() {
-                        let x = param.unappliedVar!
-                        d = Term.mk_all(x, d)
-                    }
-                    current = Term.mk_imp(d, current)
+                    let d = Prop(hyps: hyps, [Term.mk_eq(head.term, body)]).flatten()
+                    let vars = head.params.map { p in p.unappliedVar! }
+                    current = Term.mk_imp(Term.mk_all(vars, d), current)
                 case let .seal(const: const):
                     if !current.contains(const: const), let declIndex = findOpeningDeclaration(const: const, from: i, extensions: exts) {
                         i = declIndex
@@ -250,6 +251,20 @@ public struct KernelContext : Hashable {
             }
             return Theorem(kc_uuid: chain[to].uuid, prop: Prop(current))
         }
+    }
+    
+    private func bootstrap(_ prop : Term) -> Theorem? {
+        guard isWellformed(prop) else { return nil }
+        let th = Theorem(kc_uuid: uuid, prop: Prop(prop))
+        if let p = Term.dest_in_Prop(prop) {
+            guard let c = p.const else { return nil }
+            switch c {
+            //case .c_true, .c_eq, .c_in, .c_and, .c_imp, .c_ex, .c_all: return th
+            case .c_in: return th
+            default: return nil
+            }
+        }
+        return nil
     }
     
     public static func root() -> KernelContext {
@@ -264,6 +279,14 @@ public struct KernelContext : Hashable {
         func tv(_ name : String, _ params : Term...) -> Term {
             return .variable(Var(name)!, params: params)
         }
+        func axiom(_ prop : Term) {
+            print("--- axiom: \(prop)")
+            kc = kc.assume(prop) { kc, prop in
+                print("proof obligation: \(prop)")
+                return kc.bootstrap(prop.concl!)
+            }!
+        }
+        
         introduce(.c_true)
         introduce(.c_Prop)
         introduce(.c_eq, params: tv("x"), tv("y"))
@@ -272,7 +295,33 @@ public struct KernelContext : Hashable {
         introduce(.c_imp, params: tv("p"), tv("q"))
         introduce(.c_ex, binders: [v("x")], params: tv("P", tv("x")))
         introduce(.c_all, binders: [v("x")], params: tv("P", tv("x")))
+        
+        axiom(.mk_in_Prop(.c_true))
+        axiom(.mk_in_Prop(.mk_in(tv("x"), tv("T"))))
+        axiom(.mk_in_Prop(.mk_eq(tv("x"), tv("y"))))
+        axiom(.mk_in_Prop(.mk_and(tv("p"), tv("q"))))
+        axiom(.mk_in_Prop(.mk_imp(tv("p"), tv("q"))))
+        axiom(.mk_in_Prop(.mk_ex(v("x"), tv("P", tv("x")))))
+        axiom(.mk_in_Prop(.mk_all(v("x"), tv("P", tv("x")))))
+        
         return kc
+    }
+    
+    public var description: String {
+        var s = "KernelContext \(uuid), parent: \(parent?.description ?? "none")\n"
+        s.append("  Extensions:\n")
+        for e in extensions {
+            s.append("  - \(e)\n")
+        }
+        s.append("  Constants:\n")
+        for c in constants {
+            s.append("  - \(c.key): \(c.value)\n")
+        }
+        s.append("  Axioms:\n")
+        for a in axioms {
+            s.append("  - \(a)\n")
+        }
+        return s
     }
                     
 }

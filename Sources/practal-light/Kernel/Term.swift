@@ -166,6 +166,10 @@ public extension Term {
         return mk_binary(Const.c_and, left, right)
     }
     
+    static func mk_in(_ left : Term, _ right : Term) -> Term {
+        return mk_binary(Const.c_in, left, right)
+    }
+
     static func mk_ands(_ terms : [Term]) -> Term {
         switch terms.count {
         case 0: return c_true
@@ -191,8 +195,26 @@ public extension Term {
         return .constant(Const.c_all, binders: [x], params: [body])
     }
 
+    static func mk_all<Vars:Collection>(_ vars : Vars, _ body : Term) -> Term where Vars.Element == Var {
+        var t = body
+        for x in vars.reversed() {
+            t = mk_all(x, t)
+        }
+        return t
+    }
+
     static func mk_in_Prop(_ t : Term) -> Term {
         return mk_binary(Const.c_in, t, c_Prop)
+    }
+    
+    static func dest_in_Prop(_ t : Term) -> Term? {
+        switch t {
+        case .variable: return nil
+        case .constant(Const.c_in, binders: [], params: let params):
+            guard params.count == 2, params[1] == c_Prop else { return nil }
+            return params[0]
+        default: return nil
+        }
     }
 
 }

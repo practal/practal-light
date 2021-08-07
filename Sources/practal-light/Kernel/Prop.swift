@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Prop : Hashable {
+public struct Prop : Hashable, CustomStringConvertible {
     
     public var hyps : [Term]
     
@@ -62,6 +62,10 @@ public struct Prop : Hashable {
     
     public mutating func add(hyp : Term) {
         hyps.append(hyp)
+    }
+    
+    public var description: String {
+        return flatten().description
     }
     
 }

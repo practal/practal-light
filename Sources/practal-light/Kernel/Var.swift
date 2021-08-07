@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Var : Hashable, CustomStringConvertible {
+public struct Var : Hashable, CustomStringConvertible, Comparable {
     
     public static let PRIME : Character = "’"
     
@@ -38,6 +38,10 @@ public struct Var : Hashable, CustomStringConvertible {
             d.append(Var.PRIME)
         }
         return d
+    }
+    
+    public static func < (lhs: Var, rhs: Var) -> Bool {
+        return lhs.name.id < rhs.name.id || (lhs.name.id == rhs.name.id && lhs.primes < rhs.primes)
     }
     
 }

@@ -9,21 +9,23 @@ import Foundation
 
 extension KernelContext {
     
-    public func checkWellformedness(_ term : Term) -> [Var : Int]? {
-        var freeVars : [Var : Int] = [:]
+    public func checkWellformedness(_ term : Term) -> (vars: [Var], arity: [Var : Int])? {
+        var vars : [Var] = []
+        var arity : [Var : Int] = [:]
         func check(boundVars : Set<Var>, term : Term) -> Bool {
             switch term {
             case let .variable(v, params: params):
                 guard !boundVars.contains(v) else {
                     return params.isEmpty
                 }
+                if let a = arity[v] {
+                    return a == params.count
+                } else {
+                    arity[v] = params.count
+                    vars.append(v)
+                }
                 for p in params {
                     guard check(boundVars: boundVars, term: p) else { return false }
-                }
-                if let arity = freeVars[v] {
-                    return arity == params.count
-                } else {
-                    freeVars[v] = params.count
                 }
                 return true
             case let .constant(const, binders: binders, params: params):
@@ -42,7 +44,7 @@ extension KernelContext {
             }
         }
         if check(boundVars: [], term: term) {
-            return freeVars
+            return (vars: vars, arity: arity)
         } else {
             return nil
         }
@@ -51,10 +53,10 @@ extension KernelContext {
     public func isWellformed(_ term : Term) -> Bool {
         return checkWellformedness(term) != nil
     }
-    
-    /// This is guaranteed to work only for wellformed terms, otherwise the result is unspecified.
-    public func freeVarsOf(_ term : Term) -> [Var : Int] {
-        return checkWellformedness(term) ?? [:]
+        
+    /// This is only guaranteed to work for wellformed terms, otherwise the result is unspecified.
+    public func freeVarsOf(_ term : Term) -> (vars : [Var], arity : [Var : Int]) {
+        return checkWellformedness(term) ?? (vars: [], arity: [:])
     }
     
 }
