@@ -1,5 +1,5 @@
 //
-//  Kernel.swift
+//  KernelContext.swift
 //  
 //
 //  Created by Steven Obua on 05/08/2021.
@@ -269,6 +269,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
     
     public static func root() -> KernelContext {
         var kc = KernelContext(parent: nil, extensions: [], axioms: [], constants: [:])
+        
         func introduce(_ const : Const, binders : [Var] = [], params : Term...) {
             kc = kc.declare(head: .init(const: const, binders: binders, params: params)!)!
             kc = kc.seal(const: const)!
@@ -296,8 +297,12 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         introduce(.c_ex, binders: [v("x")], params: tv("P", tv("x")))
         introduce(.c_all, binders: [v("x")], params: tv("P", tv("x")))
         
+        kc = kc.assume(.mk_in_Prop(.mk_in(tv("x"), tv("T")))) { kc, prop in
+            guard kc.isWellformed(prop.flatten()) else { return nil }
+            return Theorem(kc_uuid: kc.uuid, prop: prop)
+        }!
+        
         axiom(.mk_in_Prop(.c_true))
-        axiom(.mk_in_Prop(.mk_in(tv("x"), tv("T"))))
         axiom(.mk_in_Prop(.mk_eq(tv("x"), tv("y"))))
         axiom(.mk_in_Prop(.mk_and(tv("p"), tv("q"))))
         axiom(.mk_in_Prop(.mk_imp(tv("p"), tv("q"))))
