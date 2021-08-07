@@ -263,6 +263,11 @@ public struct KernelContext : Hashable {
             return Theorem(kc_uuid: chain[to].uuid, prop: Prop(current))
         }
     }
+    
+    public static func root() -> KernelContext {
+        let kc = KernelContext(parent: nil, extensions: [], axioms: [], constants: [:])
+        return kc
+    }
                     
 }
 
