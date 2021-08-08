@@ -165,6 +165,15 @@ public extension Term {
         return .constant(op, binders: [], params: [left, right])
     }
     
+    static func dest_binary(_ term : Term) -> (const: Const, left: Term, right: Term)? {
+        switch term {
+        case let .constant(c, binders: [], params: params) where params.count == 2:
+            return (const: c, params[0], params[1])
+        default:
+            return nil
+        }
+    }
+    
     static func mk_unary(_ op : Const, _ arg : Term) -> Term {
         return .constant(op, binders: [], params: [arg])
     }

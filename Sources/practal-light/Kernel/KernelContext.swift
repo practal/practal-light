@@ -253,20 +253,30 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         }
     }
     
-    private func bootstrap(_ prop : Term) -> Theorem? {
-        guard isWellformed(prop) else { return nil }
-        let th = Theorem(kc_uuid: uuid, prop: Prop(prop))
-        if let p = Term.dest_in_Prop(prop) {
-            guard let c = p.const else { return nil }
-            switch c {
-            //case .c_true, .c_eq, .c_in, .c_and, .c_imp, .c_ex, .c_all: return th
-            case .c_in: return th
-            default: return nil
-            }
-        }
-        return nil
+    internal func substituteSafely(_ substitution : FVSubstitution, in term : Term) -> Term? {
+        guard let fvterm = wellformedFVTermOf(term) else { return nil }
+        guard let sterm = substitute(substitution, in: fvterm) else { return nil }
+        print("substituted \(term) --> \(sterm.term)")
+        return sterm.term
     }
-    
+
+    internal func substituteSafely(_ substitution : FVSubstitution, in terms : [Term]) -> [Term]? {
+        var sterms : [Term] = []
+        for t in terms {
+            guard let s = substituteSafely(substitution, in: t) else { return nil }
+            sterms.append(s)
+        }
+        return sterms
+    }
+
+    public func substitute(_ substitution : Substitution, in thm : Theorem) -> Theorem? {
+        guard isValid(thm) else { return nil }
+        guard let fvsubst = wellformedFVSubstitutionOf(substitution) else { return nil }
+        guard let hyps = substituteSafely(fvsubst, in: thm.prop.hyps) else { return nil }
+        guard let concls = substituteSafely(fvsubst, in: thm.prop.concls) else { return nil }
+        return Theorem(kc_uuid: uuid, prop: Prop(hyps: hyps, concls))
+    }
+        
     public static func root() -> KernelContext {
         var kc = KernelContext(parent: nil, extensions: [], axioms: [], constants: [:])
         
@@ -280,11 +290,23 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         func tv(_ name : String, _ params : Term...) -> Term {
             return .variable(Var(name)!, params: params)
         }
+        
+        func prove_in_is_Prop(kc : KernelContext, prop : Prop) -> Theorem? {
+            guard prop.isSimple else { return nil }
+            guard let prop = Term.dest_in_Prop(prop.concl!) else { return nil }
+            guard let (op, left, right) = Term.dest_binary(prop), op == .c_in else {
+                return nil
+            }
+            let ax = kc.axiom(0)
+            let subst = [v("x") : TermWithHoles([], left), v("T") : TermWithHoles([], right)]
+            return kc.substitute(subst, in: ax)
+        }
+        
         func axiom(_ prop : Term) {
             print("--- axiom: \(prop)")
             kc = kc.assume(prop) { kc, prop in
                 print("proof obligation: \(prop)")
-                return kc.bootstrap(prop.concl!)
+                return prove_in_is_Prop(kc: kc, prop: prop)
             }!
         }
         

@@ -225,7 +225,7 @@ extension KernelContext {
         
         return subst(boundVars: [], term: term)
     }
-    
+        
     internal func wellformedFVTermOf(_ term : Term) -> FVTerm? {
         guard isWellformed(term) else { return nil }
         return FVTermOf(term)
