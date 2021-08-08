@@ -90,13 +90,13 @@ internal typealias FVSubstitution = [Var : FVTermWithHoles]
 
 extension KernelContext {
     
-    internal func freeVarsTermOf(_ term : Term) -> FVTerm {
+    internal func FVTermOf(_ term : Term) -> FVTerm {
         switch term {
         case let .variable(v, params: params):
-            let fparams = params.map(freeVarsTermOf)
+            let fparams = params.map(FVTermOf)
             return .variable(v, params: fparams, freeVars: FVTerm.freeVarsOf(fparams).union([v]))
         case let .constant(c, binders: binders, params: params):
-            let fparams = params.map(freeVarsTermOf)
+            let fparams = params.map(FVTermOf)
             return mkConstant(const: c, binders: binders, params: fparams)
         }
     }
@@ -225,7 +225,34 @@ extension KernelContext {
         
         return subst(boundVars: [], term: term)
     }
-        
+    
+    internal func wellformedFVTermOf(_ term : Term) -> FVTerm? {
+        guard isWellformed(term) else { return nil }
+        return FVTermOf(term)
+    }
+    
+    public func isWellformed(_ termWithHoles : TermWithHoles) -> Bool {
+        guard let frees = checkWellformedness(termWithHoles.term) else { return false }
+        for hole in termWithHoles.holes {
+            guard let arity = frees.arity[hole] else { continue }
+            guard arity == 0 else { return false }
+        }
+        return true
+    }
+    
+    internal func FVTermWithHolesOf(_ termWithHoles : TermWithHoles) -> FVTermWithHoles {
+        return FVTermWithHoles(termWithHoles.holes, FVTermOf(termWithHoles.term))
+    }
+    
+    internal func wellformedFVSubstitutionOf(_ subst : Substitution) -> FVSubstitution? {
+        var fvsubst : [Var : FVTermWithHoles] = [:]
+        for (v, t) in subst {
+            guard isWellformed(t) else { return nil }
+            fvsubst[v] = FVTermWithHolesOf(t)
+        }
+        return fvsubst
+    }
+            
 }
 
 
