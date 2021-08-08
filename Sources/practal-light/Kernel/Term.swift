@@ -101,6 +101,25 @@ public extension Term {
         return Var(name: name, primes: maxPrimes + 1)
     }
     
+    static func allVarsOf(_ term : Term) -> [Id : Int] {
+        var primes : [Id : Int] = [:]
+        func add(_ v : Var) {
+            primes[v.name] = max(v.primes, primes[v.name, default: 0])
+        }
+        func collect(_ term : Term) {
+            switch term {
+            case let .variable(v, params: params):
+                add(v)
+                for p in params { collect(p) }
+            case let .constant(_, binders: binders, params: params):
+                for v in binders { add(v) }
+                for p in params { collect(p) }
+            }
+        }
+        collect(term)
+        return primes
+    }
+    
     static func replace(const : Const, with w : Var, in term : Term) -> Term {
         func repl(_ term : Term) -> Term {
             switch term {
@@ -218,7 +237,3 @@ public extension Term {
     }
 
 }
-
-
-
-
