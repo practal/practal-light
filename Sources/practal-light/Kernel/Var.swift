@@ -40,6 +40,10 @@ public struct Var : Hashable, CustomStringConvertible, Comparable {
         return d
     }
     
+    public func increment() -> Var {
+        return Var(name: name, primes: primes + 1)
+    }
+    
     public static func < (lhs: Var, rhs: Var) -> Bool {
         return lhs.name.id < rhs.name.id || (lhs.name.id == rhs.name.id && lhs.primes < rhs.primes)
     }
