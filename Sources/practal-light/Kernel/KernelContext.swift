@@ -276,7 +276,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         guard let concls = substituteSafely(fvsubst, in: thm.prop.concls) else { return nil }
         return Theorem(kc_uuid: uuid, prop: Prop(hyps: hyps, concls))
     }
-        
+    
     public static func root() -> KernelContext {
         var kc = KernelContext(parent: nil, extensions: [], axioms: [], constants: [:])
         
