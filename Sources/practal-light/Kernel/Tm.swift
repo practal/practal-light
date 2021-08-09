@@ -46,24 +46,19 @@ public indirect enum Tm : Hashable, Equatable {
         }
     }
     
-    /// If `term` is wellformed in `kc`, returns the corresponding De Bruijn term, otherwise returns `nil`
+    /// If `term` is wellformed in `kc`, returns the corresponding De Bruijn term, otherwise returns `nil`.
     public static func fromWellformedTerm(_ kc : KernelContext, term : Term) -> Tm? {
-        
-        func boundIndex(boundVars : [Var], _ v : Var) -> Int? {
-            guard let i = boundVars.lastIndex(of: v) else { return nil }
-            return boundVars.count - 1 - i
-        }
-        
-        func from(boundVars : [Var], term : Term) -> Tm? {
+                
+        func from(level : Int, boundVars : [Var : Int], term : Term) -> Tm? {
             switch term {
             case let .variable(v, params: params):
-                if let index = boundIndex(boundVars: boundVars, v) {
+                if let index = boundVars[v] {
                     guard params.isEmpty else { return nil }
-                    return .bound(index)
+                    return .bound(index + level)
                 } else {
                     var pms : [Tm] = []
                     for p in params {
-                        guard let tm = from(boundVars: boundVars, term: p) else { return nil }
+                        guard let tm = from(level: level, boundVars: boundVars, term: p) else { return nil }
                         pms.append(tm)
                     }
                     return .free(v, params: pms)
@@ -72,16 +67,22 @@ public indirect enum Tm : Hashable, Equatable {
                 guard let head = kc.constants[c]?.head else { return nil }
                 guard head.checkShape(binders, params) else { return nil }
                 var pms : [Tm] = []
+                let sublevel = level + binders.count
                 for (i, p) in params.enumerated() {
                     let selected = head.selectBoundVars(param: i, binders: binders)
-                    guard let tm = from(boundVars: boundVars + selected, term: p) else { return nil }
+                    var boundVars = boundVars
+                    for v in selected {
+                        let index = binders.count - 1 - binders.firstIndex(of: v)!
+                        boundVars[v] = index - sublevel
+                    }
+                    guard let tm = from(level: sublevel, boundVars: boundVars, term: p) else { return nil }
                     pms.append(tm)
                 }
                 return .const(c, binders: binders, params: pms)
             }
         }
         
-        return from(boundVars: [], term: term)
+        return from(level: 0, boundVars: [:], term: term)
     }
     
     public func collectFreeVars(_ vars : inout Set<Var>) {
@@ -106,13 +107,19 @@ public indirect enum Tm : Hashable, Equatable {
     }
     
     /// Returns a term with name binders which is equivalent to this De Bruijn term.
-    /// The returned term is guaranteed to be wellformed in `kc` if this term is, otherwis `nil` is returned.
-    /// The returned term does not contain any shadowed bound variables.
-    public func wellformedTerm(_ kc : KernelContext) -> Term? {
+    /// The returned term is guaranteed to be wellformed in any KernelContext in which this term is wellformed.
+    /// If there are dangling bound variables, `nil` is returned.
+    public func term() -> Term? {
         
         let frees = freeVars()
         
-        func conv(boundVars : [Var], tm : Tm) -> Term? {
+        func convMultiple(boundVars : [Var], _ tms : [Tm]) -> [Term]? {
+            let terms = tms.compactMap { tm in conv(boundVars: boundVars, tm) }
+            guard terms.count == tms.count else { return nil }
+            return terms
+        }
+        
+        func conv(boundVars : [Var], _ tm : Tm) -> Term? {
             
             func fresh(_ binders : [Var]) -> [Var] {
                 var freshBinders : [Var] = []
@@ -128,33 +135,22 @@ public indirect enum Tm : Hashable, Equatable {
             
             switch tm {
             case let .bound(index):
-                if index < boundVars.count {
+                if index >= 0 && index < boundVars.count {
                     return .variable(boundVars[boundVars.count - 1 - index], params: [])
                 } else {
                     return nil
                 }
             case let .free(v, params: pms):
-                var params : [Term] = []
-                for p in pms {
-                    guard let term = conv(boundVars: boundVars, tm: p) else { return nil }
-                    params.append(term)
-                }
+                guard let params : [Term] = convMultiple(boundVars: boundVars, pms) else { return nil }
                 return .variable(v, params: params)
             case let .const(c, binders: binders, params: pms):
-                guard let head = kc.constants[c]?.head else { return nil }
-                guard binders.count == head.binders.count && pms.count == head.params.count else { return nil }
                 let binders = fresh(binders)
-                var params : [Term] = []
-                for (i, p) in pms.enumerated() {
-                    let selected = head.selectBoundVars(param: i, binders: binders)
-                    guard let t = conv(boundVars: boundVars + selected, tm: p) else { return nil }
-                    params.append(t)
-                }
+                guard let params = convMultiple(boundVars: boundVars + binders, pms) else { return nil }
                 return .constant(c, binders: binders, params: params)
             }
         }
         
-        return conv(boundVars: [], tm: self)
+        return conv(boundVars: [], self)
         
     }
     
