@@ -57,6 +57,12 @@ public class PractalExprParser {
         }
     }
     
+    public func parse(_ expr : String) -> Term? {
+        let terms = parse(expr: expr)
+        guard terms.count == 1 else { return nil }
+        return terms.first!
+    }
+    
     public func parse(css : String) -> ConcreteSyntax? {
         switch parser.parse(input: css, position: 0, start: grammar.ConcreteSyntaxSpec) {
         case let .failed(position):

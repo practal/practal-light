@@ -46,6 +46,32 @@ public indirect enum Tm : Hashable, Equatable {
         }
     }
     
+}
+
+extension Tm : CustomStringConvertible {
+    
+    public var description: String {
+        switch self {
+        case let .bound(index):
+            return "$\(index.description)"
+        case let .free(v, params: params):
+            if params.isEmpty {
+                return v.description
+            } else {
+                let ps = params.map { p in p.description }
+                return "\(v)[\(ps.joined(separator: ", "))]"
+            }
+        case let .const(c, binders: binders, params: params):
+            let prefix = ([c.description] + binders.map { v in v.description }).joined(separator: " ")
+            let ps : [String] = params.map { p in p.description }
+            return "(" + ([prefix + "."] + ps).joined(separator: " ") + ")"
+        }
+    }
+
+}
+
+extension Tm {
+    
     /// If `term` is wellformed in `kc`, returns the corresponding De Bruijn term, otherwise returns `nil`.
     public static func fromWellformedTerm(_ kc : KernelContext, term : Term) -> Tm? {
                 

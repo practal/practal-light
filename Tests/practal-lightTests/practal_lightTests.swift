@@ -353,4 +353,17 @@
             let kc = KernelContext.root()
             print(kc.description)
         }
+        
+        func testTm() {
+            let parser = PractalExprParser()
+            let kc = KernelContext.root()
+            let term = parser.parse("(Practal.eq. a (Practal.ex x. (Practal.eq. x T)))")!
+            print("term = \(term)")
+            let tm = Tm.fromWellformedTerm(kc, term: term)!
+            print("tm = \(tm)")
+            var subst = TmSubstitution()
+            subst[Var("T")!] = TmWithHoles(.bound(1))
+            print("subst = \(subst.apply(tm)!)")
+            //let tm =
+        }
     }
