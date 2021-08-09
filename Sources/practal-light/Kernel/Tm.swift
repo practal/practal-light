@@ -98,7 +98,7 @@ extension Tm {
                     let selected = head.selectBoundVars(param: i, binders: binders)
                     var boundVars = boundVars
                     for v in selected {
-                        let index = binders.count - 1 - binders.firstIndex(of: v)!
+                        let index = binders.firstIndex(of: v)!
                         boundVars[v] = index - sublevel
                     }
                     guard let tm = from(level: sublevel, boundVars: boundVars, term: p) else { return nil }
@@ -171,7 +171,7 @@ extension Tm {
                 return .variable(v, params: params)
             case let .const(c, binders: binders, params: pms):
                 let binders = fresh(binders)
-                guard let params = convMultiple(boundVars: boundVars + binders, pms) else { return nil }
+                guard let params = convMultiple(boundVars: boundVars + binders.reversed(), pms) else { return nil }
                 return .constant(c, binders: binders, params: params)
             }
         }

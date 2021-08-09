@@ -39,7 +39,7 @@ public struct TmWithHoles {
         var subst = TmSubstitution()
         holes = termWithHoles.holes.count
         for (i, v) in termWithHoles.holes.enumerated() {
-            subst[v] = TmWithHoles(.bound(holes - 1 - i))
+            subst[v] = TmWithHoles(.bound(i))
         }
         if let tm = subst.apply(tm) {
             self.tm = tm
@@ -56,9 +56,8 @@ public struct TmWithHoles {
     public func fillHoles(_ params : [Tm]) -> Tm? {
         guard params.count == holes else { return nil }
         var subst = TmSubstitution()
-        let I = params.count - 1
         for (i, p) in params.enumerated() {
-            subst[I - i] = TmWithHoles(p)
+            subst[i] = TmWithHoles(p)
         }
         return subst.apply(level: params.count, tm)
     }
