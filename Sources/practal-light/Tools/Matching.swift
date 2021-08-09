@@ -129,3 +129,20 @@ public struct Matching {
     
 }
 
+extension Matching {
+    
+    public func proveByAxiom(term : Term) -> (axiom : Int, thm : Theorem)? {
+        guard let tm = kc.tmOf(term) else { return nil }
+        for (i, ax) in kc.axioms.enumerated() {
+            let ax = kc.tmOf(ax)!
+            guard let subst = match(pattern: ax, instance: tm) else { continue }
+            let th = kc.axiom(i)
+            guard let sth = kc.substitute(subst, in: th) else { continue }
+            return (axiom: i, thm: sth)
+        }
+        return nil
+    }
+    
+    
+}
+

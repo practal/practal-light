@@ -219,3 +219,18 @@ public struct TmSubstitution {
     }
         
 }
+
+extension KernelContext {
+    
+    public func isWellformed(level : Int, _ tm : Tm) -> Bool {
+        return true
+    }
+    
+    public func isWellformed(_ twh : TmWithHoles) -> Bool {
+        return true
+    }
+    
+    public func isWellformed(_ subst : TmSubstitution) -> Bool {
+        return true
+    }
+}

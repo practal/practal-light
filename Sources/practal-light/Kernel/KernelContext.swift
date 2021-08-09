@@ -272,6 +272,15 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         return Theorem(kc_uuid: uuid, prop: Prop(hyps: hyps, concls))
     }
     
+    public func substitute(_ subst : TmSubstitution, in thm : Theorem) -> Theorem? {
+        guard isValid(thm) else { return nil }
+        guard isWellformed(subst) else { return nil }
+        guard let hyps = substituteSafely(subst, in: thm.prop.hyps) else { return nil }
+        guard let concls = substituteSafely(subst, in: thm.prop.concls) else { return nil }
+        return Theorem(kc_uuid: uuid, prop: Prop(hyps: hyps, concls))
+
+    }
+    
     public static func root() -> KernelContext {
         var kc = KernelContext(parent: nil, extensions: [], axioms: [], constants: [:])
         
@@ -301,7 +310,10 @@ public struct KernelContext : Hashable, CustomStringConvertible {
             print("--- axiom: \(prop)")
             kc = kc.assume(prop) { kc, prop in
                 print("proof obligation: \(prop)")
-                return prove_in_is_Prop(kc: kc, prop: prop)
+                guard let concl = prop.concl else { return nil }
+                guard let proof = Matching(kc: kc).proveByAxiom(term: concl) else { return nil }
+                return proof.thm
+                //return prove_in_is_Prop(kc: kc, prop: prop)
             }!
         }
         
