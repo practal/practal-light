@@ -139,7 +139,7 @@ extension KernelContext {
         return r(boundVars : [], term)
     }
         
-    internal func substitute(_ substitution : FVSubstitution, in term : FVTerm) -> FVTerm? {
+    internal func substitute(_ substitution : FVSubstitution, in term : FVTerm, boundVars : Set<Var> = []) -> FVTerm? {
                 
         if substitution.isEmpty || term.freeVars.isEmpty { return term }
         
@@ -223,7 +223,7 @@ extension KernelContext {
             }
         }
         
-        return subst(boundVars: [], term: term)
+        return subst(boundVars: boundVars, term: term)
     }
         
     internal func wellformedFVTermOf(_ term : Term) -> FVTerm? {
@@ -251,6 +251,27 @@ extension KernelContext {
             fvsubst[v] = FVTermWithHolesOf(t)
         }
         return fvsubst
+    }
+    
+    internal func substituteSafely(_ substitution : FVSubstitution, in term : Term, boundVars : Set<Var> = []) -> Term? {
+        guard let fvterm = wellformedFVTermOf(term) else { return nil }
+        guard let sterm = substitute(substitution, in: fvterm, boundVars: boundVars) else { return nil }
+        print("substituted \(term) --> \(sterm.term)")
+        return sterm.term
+    }
+
+    internal func substituteSafely(_ substitution : FVSubstitution, in terms : [Term]) -> [Term]? {
+        var sterms : [Term] = []
+        for t in terms {
+            guard let s = substituteSafely(substitution, in: t) else { return nil }
+            sterms.append(s)
+        }
+        return sterms
+    }
+    
+    public func substituteSafely(_ substitution : Substitution, in term : Term, boundVars : Set<Var> = []) -> Term? {
+        guard let fvsubst = wellformedFVSubstitutionOf(substitution) else { return nil }
+        return substituteSafely(fvsubst, in: term, boundVars: boundVars)
     }
             
 }

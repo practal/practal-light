@@ -253,22 +253,6 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         }
     }
     
-    internal func substituteSafely(_ substitution : FVSubstitution, in term : Term) -> Term? {
-        guard let fvterm = wellformedFVTermOf(term) else { return nil }
-        guard let sterm = substitute(substitution, in: fvterm) else { return nil }
-        print("substituted \(term) --> \(sterm.term)")
-        return sterm.term
-    }
-
-    internal func substituteSafely(_ substitution : FVSubstitution, in terms : [Term]) -> [Term]? {
-        var sterms : [Term] = []
-        for t in terms {
-            guard let s = substituteSafely(substitution, in: t) else { return nil }
-            sterms.append(s)
-        }
-        return sterms
-    }
-
     public func substitute(_ substitution : Substitution, in thm : Theorem) -> Theorem? {
         guard isValid(thm) else { return nil }
         guard let fvsubst = wellformedFVSubstitutionOf(substitution) else { return nil }
