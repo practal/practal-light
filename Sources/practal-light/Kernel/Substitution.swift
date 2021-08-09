@@ -71,7 +71,30 @@ public struct TmWithHoles {
     }
     
     public static func constant(holes : Int, head : Head, fresh : (Var) -> Var) -> TmWithHoles {
-        fatalError()
+        var params : [Tm] = []
+        let binders = head.binders
+        let level = binders.count
+        let holeArgs = (level ..< level + holes).map { i in Tm.bound(i)}
+        for (i, p) in head.params.enumerated() {
+            let selected = head.selectBoundVars(param: i, binders: binders)
+            let args : [Tm] = selected.map { b in Tm.bound(head.binderIndex(b)!) }
+            let F = Tm.free(fresh(p.var!), params: args + holeArgs)
+            params.append(F)
+        }
+        let tm = Tm.const(head.const, binders: binders, params: params)
+        return TmWithHoles(holes: holes, tm)
+    }
+    
+    public static func variable(holes : Int, `var` v: Var, numargs : Int, fresh : (Var) -> Var) -> TmWithHoles {
+        var params : [Tm] = []
+        let holeArgs = (0 ..< holes).map { i in Tm.bound(i)}
+        for k in 0 ..< numargs {
+            let name = "\(v.name.id)-arg-\(k)"
+            let p = Tm.free(Var(name)!, params: holeArgs)
+            params.append(p)
+        }
+        let tm = Tm.free(v, params: params)
+        return TmWithHoles(holes: holes, tm)
     }
 
 }
@@ -133,6 +156,27 @@ public struct TmSubstitution {
         return app(level: level, tm)
     }
     
+    public func apply(_ tm : TmWithHoles) -> TmWithHoles? {
+        guard let s = apply(level: tm.holes, tm.tm) else { return nil }
+        return TmWithHoles(holes: tm.holes, s)
+    }
+    
+    public mutating func compose(_ subst : TmSubstitution) -> Bool {
+        var newFree : [Var : TmWithHoles] = [:]
+        var newBound : [Int : TmWithHoles] = [:]
+        for (v, t) in free {
+            guard let s = subst.apply(t) else { return false }
+            newFree[v] = s
+        }
+        for (i, t) in bound {
+            guard let s = subst.apply(t) else { return false }
+            newBound[i] = s
+        }
+        free = newFree
+        bound = newBound
+        return true
+    }
+    
     private func app(level : Int, _ tms : [Tm]) -> [Tm]? {
         let stms = tms.compactMap { tm in app(level: level, tm) }
         guard stms.count == tms.count else { return nil }
@@ -159,6 +203,19 @@ public struct TmSubstitution {
             guard let params = apply(level: level + binders.count, params) else { return nil }
             return .const(c, binders: binders, params: params)
         }
+    }
+    
+    public static func varSubst(_ table : [Var : Var]) -> TmSubstitution {
+        let free = table.mapValues { v in TmWithHoles(Tm.free(v, params: [])) }
+        return TmSubstitution(free: free)
+    }
+    
+    public static func reverseVarSubst(_ table : [Var : Var]) -> TmSubstitution {
+        var reversedTable : [Var : Var] = [:]
+        for (v, w) in table {
+            reversedTable[w] = v
+        }
+        return varSubst(reversedTable)
     }
         
 }
