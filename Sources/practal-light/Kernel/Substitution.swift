@@ -61,6 +61,18 @@ public struct TmWithHoles {
         }
         return subst.apply(level: params.count, tm)
     }
+    
+    public static func projection(holes : Int, _ k : Int) -> TmWithHoles {
+        return TmWithHoles(holes: holes, .bound(k))
+    }
+    
+    public static func constant(holes : Int, _ bound : Int) -> TmWithHoles {
+        return TmWithHoles(holes: holes, .bound(bound + holes))
+    }
+    
+    public static func constant(holes : Int, head : Head, fresh : (Var) -> Var) -> TmWithHoles {
+        fatalError()
+    }
 
 }
 
@@ -148,5 +160,5 @@ public struct TmSubstitution {
             return .const(c, binders: binders, params: params)
         }
     }
-    
+        
 }

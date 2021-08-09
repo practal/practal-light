@@ -196,6 +196,30 @@ extension Tm {
         }
     }
     
+    public func freshFreeVars(fresh : (Var) -> Var, renaming : inout [Var : Var]) -> Tm {
+        switch self {
+        case .bound: return self
+        case let .free(v, params: params):
+            let params = params.map { p in p.freshFreeVars(fresh: fresh, renaming: &renaming) }
+            if let w = renaming[v] {
+                return .free(w, params: params)
+            } else {
+                let w = fresh(v)
+                renaming[v] = w
+                return .free(w, params: params)
+            }
+        case let .const(c, binders: binders, params: params):
+            let params = params.map { p in p.freshFreeVars(fresh: fresh, renaming: &renaming) }
+            return .const(c, binders: binders, params: params)
+        }
+    }
+    
+    public func freshFreeVars(fresh : (Var) -> Var) -> (fresh: Tm, renaming: [Var : Var]) {
+        var renaming : [Var : Var] = [:]
+        let tm = freshFreeVars(fresh: fresh, renaming: &renaming)
+        return (fresh: tm, renaming: renaming)
+    }
+    
 }
 
 extension KernelContext {
