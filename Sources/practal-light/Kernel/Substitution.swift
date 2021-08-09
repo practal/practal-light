@@ -14,6 +14,7 @@ public struct TermWithHoles {
     public let term : Term
     
     public init(_ holes : [Var], _ term : Term) {
+        guard Set(holes).count == holes.count else { fatalError() }
         self.holes = holes
         self.term = term
     }
