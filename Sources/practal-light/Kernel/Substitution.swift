@@ -84,6 +84,10 @@ public struct TmSubstitution {
         }
     }
     
+    public mutating func restrict(_ vars : Set<Var>) {
+        free = free.filter { (v, _) in vars.contains(v) }
+    }
+    
     public subscript(_ index : Int) -> TmWithHoles? {
         get {
             return bound[index]
