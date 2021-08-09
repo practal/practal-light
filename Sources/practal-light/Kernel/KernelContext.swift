@@ -252,12 +252,23 @@ public struct KernelContext : Hashable, CustomStringConvertible {
             return Theorem(kc_uuid: chain[to].uuid, prop: Prop(current))
         }
     }
-    
+        
+    public func substituteSafely(_ substitution : TmSubstitution, in term : Term) -> Term? {
+        guard let tm = Tm.fromWellformedTerm(self, term: term) else { return nil }
+        return substitution.apply(tm)?.term()
+    }
+
+    public func substituteSafely(_ substitution : TmSubstitution, in terms : [Term]) -> [Term]? {
+        let sterms = terms.compactMap { t in substituteSafely(substitution, in: t) }
+        guard sterms.count == terms.count else { return nil }
+        return sterms
+    }
+
     public func substitute(_ substitution : Substitution, in thm : Theorem) -> Theorem? {
         guard isValid(thm) else { return nil }
-        guard let fvsubst = wellformedFVSubstitutionOf(substitution) else { return nil }
-        guard let hyps = substituteSafely(fvsubst, in: thm.prop.hyps) else { return nil }
-        guard let concls = substituteSafely(fvsubst, in: thm.prop.concls) else { return nil }
+        guard let subst = TmSubstitution(self, wellformed: substitution) else { return nil }
+        guard let hyps = substituteSafely(subst, in: thm.prop.hyps) else { return nil }
+        guard let concls = substituteSafely(subst, in: thm.prop.concls) else { return nil }
         return Theorem(kc_uuid: uuid, prop: Prop(hyps: hyps, concls))
     }
     

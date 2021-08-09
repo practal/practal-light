@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Matching {
+/*public struct Matching {
     
     private struct Task {
         
@@ -109,5 +109,5 @@ public struct Matching {
         
     }
     
-}
+}*/
 

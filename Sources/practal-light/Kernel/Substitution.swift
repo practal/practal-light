@@ -2,7 +2,7 @@
 //  Substitution.swift
 //  
 //
-//  Created by Steven Obua on 08/08/2021.
+//  Created by Steven Obua on 09/08/2021.
 //
 
 import Foundation
@@ -23,258 +23,127 @@ public struct TermWithHoles {
 
 public typealias Substitution = [Var : TermWithHoles]
 
-internal enum FVTerm {
+public struct TmWithHoles {
     
-    case variable(Var, params: [FVTerm], freeVars: Set<Var>)
+    public let holes : Int
     
-    case constant(Const, binders: [Var], params: [FVTerm], freeVars: Set<Var>)
+    public let tm : Tm
     
-    public var freeVars : Set<Var> {
-        switch self {
-        case let .variable(_, params: _, freeVars: freeVars): return freeVars
-        case let .constant(_, binders: _, params: _, freeVars: freeVars): return freeVars
-        }
-    }
-    
-    public var term : Term {
-        switch self {
-        case let .variable(v, params: fvparams, freeVars: _):
-            return .variable(v, params: fvparams.map { p in p.term })
-        case let .constant(c, binders: binders, params: fvparams, freeVars: _):
-            return .constant(c, binders: binders, params: fvparams.map { p in p.term })
-        }
-    }
-    
-    public static func freeVarsOf(_ terms : [FVTerm]) -> Set<Var> {
-        var fs : Set<Var> = []
-        for t in terms {
-            fs.formUnion(t.freeVars)
-        }
-        return fs
-    }
-    
-    public func collectAllVars(_ vars : inout Set<Var>) {
-        switch self {
-        case let .variable(v, params: params, freeVars: _):
-            vars.insert(v)
-            for p in params {
-                p.collectAllVars(&vars)
-            }
-        case let .constant(_, binders: binders, params: params, freeVars: _):
-            vars.formUnion(binders)
-            for p in params {
-                p.collectAllVars(&vars)
-            }
-        }
-    }
-
-    
-}
-
-internal struct FVTermWithHoles {
-    
-    public let holes : [Var]
-    
-    public let term : FVTerm
-    
-    public let freeVars : Set<Var>
-    
-    public init(_ holes : [Var], _ term : FVTerm) {
+    public init(holes : Int = 0, _ tm : Tm) {
         self.holes = holes
-        self.term = term
-        self.freeVars = term.freeVars.subtracting(holes)
+        self.tm = tm
     }
-
-}
-
-internal typealias FVSubstitution = [Var : FVTermWithHoles]
-
-extension KernelContext {
     
-    internal func FVTermOf(_ term : Term) -> FVTerm {
-        switch term {
-        case let .variable(v, params: params):
-            let fparams = params.map(FVTermOf)
-            return .variable(v, params: fparams, freeVars: FVTerm.freeVarsOf(fparams).union([v]))
-        case let .constant(c, binders: binders, params: params):
-            let fparams = params.map(FVTermOf)
-            return mkConstant(const: c, binders: binders, params: fparams)
+    public init?(_ kc : KernelContext, wellformed termWithHoles : TermWithHoles) {
+        guard let tm = Tm.fromWellformedTerm(kc, term: termWithHoles.term) else { return nil }
+        var subst = TmSubstitution()
+        holes = termWithHoles.holes.count
+        for (i, v) in termWithHoles.holes.enumerated() {
+            subst[v] = TmWithHoles(.bound(holes - 1 - i))
+        }
+        if let tm = subst.apply(tm) {
+            self.tm = tm
+        } else {
+            return nil
         }
     }
     
-    internal func mkConstant(const : Const, binders : [Var], params : [FVTerm]) -> FVTerm {
-        guard let head = constants[const]?.head,
-              head.binders.count == binders.count, head.params.count == params.count // cheap sanity checks
-        else { fatalError() }
-        var frees : Set<Var> = []
+    public func fillHoles() -> Tm? {
+        guard holes == 0 else { return nil }
+        return tm
+    }
+    
+    public func fillHoles(_ params : [Tm]) -> Tm? {
+        guard params.count == holes else { return nil }
+        var subst = TmSubstitution()
+        let I = params.count - 1
         for (i, p) in params.enumerated() {
-            let boundVars = head.selectBoundVars(param: i, binders: binders)
-            frees.formUnion(p.freeVars.subtracting(boundVars))
+            subst[I - i] = TmWithHoles(p)
         }
-        return .constant(const, binders: binders, params: params, freeVars: frees)
+        return subst.apply(level: params.count, tm)
     }
 
-    private func rename(_ renaming : [Var : Var], in term : FVTerm) -> FVTerm {
-        
-        func r(boundVars : Set<Var>, _ term : FVTerm) -> FVTerm {
-            switch term {
-            case let .variable(v, params: params, freeVars: _) where boundVars.contains(v):
-                guard params.isEmpty else { fatalError() }
-                return term
-            case let .variable(v, params: params, freeVars: _):
-                let rparams = params.map { p in r(boundVars: boundVars, p) }
-                let v = renaming[v, default: v]
-                return .variable(v, params: rparams, freeVars: FVTerm.freeVarsOf(rparams).union([v]))
-            case let .constant(const, binders: binders, params: params, freeVars: _):
-                let head = constants[const]!.head
-                var rparams : [FVTerm] = []
-                for (i, p) in params.enumerated() {
-                    let boundVars = boundVars.union(head.selectBoundVars(param: i, binders: binders))
-                    rparams.append(r(boundVars: boundVars, p))
-                }
-                return mkConstant(const: const, binders: binders, params: rparams)
-            }
-
-        }
-        
-        return r(boundVars : [], term)
-    }
-        
-    internal func substitute(_ substitution : FVSubstitution, in term : FVTerm, boundVars : Set<Var> = []) -> FVTerm? {
-                
-        if substitution.isEmpty || term.freeVars.isEmpty { return term }
-        
-        let varsToBeSubstituted = Set(substitution.keys)
-
-        func substMultiple(boundVars : Set<Var>, terms : [FVTerm]) -> [FVTerm]? {
-            var result : [FVTerm] = []
-            for t in terms {
-                guard let s = subst(boundVars: boundVars, term: t) else { return nil }
-                result.append(s)
-            }
-            return result
-        }
-        
-        func renameAndSubst(boundVars : Set<Var>, const : Const, binders : [Var], params : [FVTerm],
-                            clashingBoundVars : Set<Var>) -> FVTerm?
-        {
-            var allVars : Set<Var> = boundVars // Including boundVars is not necessary, but nicer.
-            allVars.formUnion(binders)
-            for p in params {
-                p.collectAllVars(&allVars)
-            }
-            var renaming : [Var : Var] = [:]
-            for b in binders {
-                guard clashingBoundVars.contains(b) else {
-                    continue
-                }
-                var nb = b.increment()
-                while allVars.contains(nb) {
-                    nb = nb.increment()
-                }
-                renaming[b] = nb
-                allVars.insert(nb)
-            }
-            let rbinders = binders.map { v in renaming[v, default: v] }
-            let rparams = params.map { p in rename(renaming, in: p) }
-            let term = mkConstant(const: const, binders: rbinders, params: rparams)
-            return subst(boundVars: boundVars, term: term)
-        }
-        
-        func subst(boundVars : Set<Var>, term : FVTerm) -> FVTerm? {
-            guard !varsToBeSubstituted.isDisjoint(with: term.freeVars) else { return term }
-            switch term {
-            case let .variable(v, params: params, freeVars: _):
-                guard !boundVars.contains(v) else { return term }
-                guard let params = substMultiple(boundVars: boundVars, terms: params) else { return nil }
-                if let termWithHoles = substitution[v] {
-                    guard termWithHoles.holes.count == params.count else { return nil }
-                    var subst = FVSubstitution()
-                    for (i, hole) in termWithHoles.holes.enumerated() {
-                        subst[hole] = FVTermWithHoles([], params[i])
-                    }
-                    return substitute(subst, in: termWithHoles.term)
-                } else {
-                    return .variable(v, params: params, freeVars: FVTerm.freeVarsOf(params))
-                }
-            case let .constant(c, binders: binders, params: params, freeVars: _):
-                guard let head = constants[c]?.head else { return nil }
-                var clashingBoundVars : Set<Var> = []
-                for (i, param) in params.enumerated() {
-                    let boundVars = head.selectBoundVars(param: i, binders: binders)
-                    // Does the param have any free variables such that
-                    // the terms to be substituted for these have free variables in boundVars?
-                    // If so, we need to rename those boundVars.
-                    for v in param.freeVars {
-                        if let twh = substitution[v] {
-                            clashingBoundVars.formUnion(twh.freeVars.intersection(boundVars))
-                        }
-                    }
-                }
-                guard clashingBoundVars.isEmpty else {
-                    return renameAndSubst(boundVars: boundVars, const: c, binders: binders, params: params, clashingBoundVars: clashingBoundVars)
-                }
-                var sparams : [FVTerm] = []
-                for (i, param) in params.enumerated() {
-                    let boundVars = boundVars.union(head.selectBoundVars(param: i, binders: binders))
-                    guard let sparam = subst(boundVars: boundVars, term: param) else { return nil }
-                    sparams.append(sparam)
-                }
-                return mkConstant(const: c, binders: binders, params: sparams)
-            }
-        }
-        
-        return subst(boundVars: boundVars, term: term)
-    }
-        
-    internal func wellformedFVTermOf(_ term : Term) -> FVTerm? {
-        guard isWellformed(term) else { return nil }
-        return FVTermOf(term)
-    }
-    
-    public func isWellformed(_ termWithHoles : TermWithHoles) -> Bool {
-        guard let frees = checkWellformedness(termWithHoles.term) else { return false }
-        for hole in termWithHoles.holes {
-            guard let arity = frees.arity[hole] else { continue }
-            guard arity == 0 else { return false }
-        }
-        return true
-    }
-    
-    internal func FVTermWithHolesOf(_ termWithHoles : TermWithHoles) -> FVTermWithHoles {
-        return FVTermWithHoles(termWithHoles.holes, FVTermOf(termWithHoles.term))
-    }
-    
-    internal func wellformedFVSubstitutionOf(_ subst : Substitution) -> FVSubstitution? {
-        var fvsubst : [Var : FVTermWithHoles] = [:]
-        for (v, t) in subst {
-            guard isWellformed(t) else { return nil }
-            fvsubst[v] = FVTermWithHolesOf(t)
-        }
-        return fvsubst
-    }
-    
-    internal func substituteSafely(_ substitution : FVSubstitution, in term : Term, boundVars : Set<Var> = []) -> Term? {
-        guard let fvterm = wellformedFVTermOf(term) else { return nil }
-        guard let sterm = substitute(substitution, in: fvterm, boundVars: boundVars) else { return nil }
-        print("substituted \(term) --> \(sterm.term)")
-        return sterm.term
-    }
-
-    internal func substituteSafely(_ substitution : FVSubstitution, in terms : [Term]) -> [Term]? {
-        var sterms : [Term] = []
-        for t in terms {
-            guard let s = substituteSafely(substitution, in: t) else { return nil }
-            sterms.append(s)
-        }
-        return sterms
-    }
-    
-    public func substituteSafely(_ substitution : Substitution, in term : Term, boundVars : Set<Var> = []) -> Term? {
-        guard let fvsubst = wellformedFVSubstitutionOf(substitution) else { return nil }
-        return substituteSafely(fvsubst, in: term, boundVars: boundVars)
-    }
-            
 }
 
+public struct TmSubstitution {
+    
+    private var free : [Var : TmWithHoles]
+    private var bound : [Int : TmWithHoles]
+    
+    public init(free : [Var : TmWithHoles] = [:], bound : [Int : TmWithHoles] = [:]) {
+        self.free = free
+        self.bound = bound
+    }
+    
+    public init?(_ kc : KernelContext, wellformed substitution : Substitution) {
+        bound = [:]
+        free = [:]
+        for (v, t) in substitution {
+            guard let twh = TmWithHoles(kc, wellformed: t) else { return nil }
+            free[v] = twh
+        }
+    }
+    
+    public subscript(_ index : Int) -> TmWithHoles? {
+        get {
+            return bound[index]
+        }
+        
+        set {
+            bound[index] = newValue
+        }
+    }
 
+    public subscript(_ v : Var) -> TmWithHoles? {
+        get {
+            return free[v]
+        }
+        
+        set {
+            free[v] = newValue
+        }
+    }
+
+    public var isEmpty : Bool {
+        return free.isEmpty && bound.isEmpty
+    }
+    
+    public func apply(level : Int = 0, _ tms : [Tm]) -> [Tm]? {
+        guard !isEmpty else { return tms }
+        return app(level: level, tms)
+    }
+    
+    public func apply(level : Int = 0, _ tm : Tm) -> Tm? {
+        guard !isEmpty else { return tm }
+        return app(level: level, tm)
+    }
+    
+    private func app(level : Int, _ tms : [Tm]) -> [Tm]? {
+        let stms = tms.compactMap { tm in app(level: level, tm) }
+        guard stms.count == tms.count else { return nil }
+        return stms
+    }
+    
+    private func app(level : Int, _ tm : Tm) -> Tm? {
+        switch tm {
+        case let .bound(index):
+            if index >= level, let twh = bound[index - level] {
+                return twh.fillHoles()?.adjust(level: 0, delta: level)
+            } else {
+                return tm
+            }
+        case let .free(v, params: params):
+            guard let params = app(level: level, params) else { return nil }
+            if let twh = free[v] {
+                let adjusted = params.map { p in p.adjust(level: level, delta: -level) }
+                return twh.fillHoles(adjusted)?.adjust(level: 0, delta: level)
+            } else {
+                return .free(v, params: params)
+            }
+        case let .const(c, binders: binders, params: params):
+            guard let params = apply(level: level + binders.count, params) else { return nil }
+            return .const(c, binders: binders, params: params)
+        }
+    }
+    
+}
