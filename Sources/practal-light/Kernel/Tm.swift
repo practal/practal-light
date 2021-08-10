@@ -75,6 +75,8 @@ extension Tm {
     /// If `term` is wellformed in `kc`, returns the corresponding De Bruijn term, otherwise returns `nil`.
     public static func fromWellformedTerm(_ kc : KernelContext, term : Term) -> Tm? {
                 
+        var frees = FreeVars()
+        
         func from(level : Int, boundVars : [Var : Int], term : Term) -> Tm? {
             switch term {
             case let .variable(v, params: params):
@@ -87,6 +89,7 @@ extension Tm {
                         guard let tm = from(level: level, boundVars: boundVars, term: p) else { return nil }
                         pms.append(tm)
                     }
+                    guard frees.add(v, arity: pms.count) else { return nil }
                     return .free(v, params: pms)
                 }
             case let .constant(c, binders: binders, params: params):
@@ -111,44 +114,14 @@ extension Tm {
         return from(level: 0, boundVars: [:], term: term)
     }
     
-    public func collectFreeVars(_ vars : inout [Var : Int]) -> Bool {
-        switch self {
-        case .bound: return true
-        case let .free(v, params: params):
-            var ok : Bool
-            if let a = vars[v] {
-                ok = a == params.count
-            } else {
-                vars[v] = params.count
-                ok = true
-            }
-            for p in params {
-                if (!p.collectFreeVars(&vars)) {
-                    ok = false
-                }
-            }
-            return ok
-        case let .const(_, binders: _, params: params):
-            var ok = true
-            for p in params {
-                if (!p.collectFreeVars(&vars)) {
-                    ok = false
-                }
-            }
-            return ok
-        }
+    public func freeVars() -> Set<Var> {
+        return FreeVars(self).vars
     }
     
     public func freeVarsWithArity() -> [Var : Int]? {
-        var vars : [Var : Int] = [:]
-        guard collectFreeVars(&vars) else { return nil }
-        return vars
-    }
-    
-    public func freeVars() -> Set<Var> {
-        var vars : [Var : Int] = [:]
-        let _ = collectFreeVars(&vars)
-        return Set(vars.keys)
+        var frees = FreeVars()
+        guard frees.add(self) else { return nil }
+        return frees.arities
     }
     
     /// Returns a term with name binders which is equivalent to this De Bruijn term.

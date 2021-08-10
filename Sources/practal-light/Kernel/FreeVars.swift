@@ -17,6 +17,15 @@ public struct FreeVars {
         self._arities = arities
     }
     
+    public init(_ tm : Tm) {
+        _arities = [:]
+        self.add(tm)
+    }
+    
+    public var vars : Set<Var> {
+        return Set(_arities.keys)
+    }
+    
     @discardableResult
     public mutating func add(_ v : Var, arity : Int) -> Bool {
         if let a = _arities[v] {
