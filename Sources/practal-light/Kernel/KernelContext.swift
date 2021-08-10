@@ -276,6 +276,34 @@ public struct KernelContext : Hashable, CustomStringConvertible {
 
     }
     
+    private func mk_thm(_ prop : Term) -> Theorem {
+        return Theorem(kc_uuid: uuid, prop: prop)
+    }
+    
+    public func andIntro(_ left : Theorem, _ right : Theorem) -> Theorem? {
+        guard isValid(left), isValid(right) else { return nil }
+        return mk_thm(.mk_and(left.prop, right.prop))
+    }
+    
+    public func andElim1(_ thm : Theorem) -> Theorem? {
+        guard isValid(thm) else { return nil }
+        guard let (op, left, _) = Term.dest_binary(thm.prop), op == .c_and else { return nil }
+        return mk_thm(left)
+    }
+    
+    public func andElim2(_ thm : Theorem) -> Theorem? {
+        guard isValid(thm) else { return nil }
+        guard let (op, _, right) = Term.dest_binary(thm.prop), op == .c_and else { return nil }
+        return mk_thm(right)
+    }
+    
+    public func modusPonens(_ hyp : Theorem, _ imp : Theorem) -> Theorem? {
+        guard isValid(hyp), isValid(imp) else { return nil }
+        guard let (op, left, right) = Term.dest_binary(imp.prop), op == .c_imp else { return nil }
+        guard alpha_equivalent(hyp.prop, left) else { return nil }
+        return mk_thm(right)
+    }
+
     public static func root() -> KernelContext {
         var kc = KernelContext(parent: nil, extensions: [], axioms: [], constants: [:])
         
@@ -323,6 +351,8 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         axiom(.mk_in_Prop(.mk_imp(tv("p"), tv("q"))))
         axiom(.mk_in_Prop(.mk_ex(v("x"), tv("P", tv("x")))))
         axiom(.mk_in_Prop(.mk_all(v("x"), tv("P", tv("x")))))
+        
+        axiom(Term.c_true)
         
         axiom(.mk_eq(tv("x"), tv("x")))
         axiom(.mk_imp(.mk_eq(tv("x"), tv("y")), .mk_eq(tv("y"), tv("x"))))
