@@ -333,7 +333,9 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         axiom(.mk_in_Prop(.mk_all(v("x"), tv("P", tv("x")))))
         
         axiom(.mk_eq(tv("x"), tv("x")))
-        
+        axiom(.mk_imp(.mk_eq(tv("x"), tv("y")), .mk_eq(tv("y"), tv("x"))))
+        axiom(.mk_imp(.mk_and(.mk_eq(tv("x"), tv("y")), .mk_eq(tv("y"), tv("z"))), .mk_eq(tv("x"), tv("z"))))
+
         return kc
     }
     
