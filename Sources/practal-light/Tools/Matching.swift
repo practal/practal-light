@@ -9,7 +9,7 @@ import Foundation
 
 public struct Matching {
     
-    private struct Task {
+    private struct Task : CustomStringConvertible {
         
         let level : Int
                 
@@ -20,6 +20,10 @@ public struct Matching {
         func apply(_ subst : TmSubstitution) -> Task? {
             guard let s = subst.apply(level: level, pattern) else { return nil }
             return Task(level: level, pattern: s, instance: instance)
+        }
+        
+        var description: String {
+            return "[\(level)] \(pattern) => \(instance)"
         }
                 
     }
@@ -106,6 +110,7 @@ public struct Matching {
         while !tasks.isEmpty {
             let task = tasks.removeLast()
             guard solveTask(task) else {
+                print("could not solve task!")
                 return nil
             }
         }

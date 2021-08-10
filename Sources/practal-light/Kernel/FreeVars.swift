@@ -26,34 +26,7 @@ public struct FreeVars {
             return true
         }
     }
-    
-    @discardableResult
-    public mutating func addAtomic(_ tm : Tm) -> Bool {
-        var newArities = _arities
-        func collect(_ tm : Tm) -> Bool {
-            switch tm {
-            case .bound: return true
-            case let .free(v, params: params):
-                if let a = newArities[v] {
-                    guard a == params.count else {
-                        return false
-                    }
-                } else {
-                    newArities[v] = params.count
-                }
-                return true
-            case let .const(_, binders: _, params: params):
-                for p in params {
-                    guard addAtomic(p) else { return false }
-                }
-                return true
-            }
-        }
-        guard collect(tm) else { return false }
-        _arities = newArities
-        return true
-    }
-    
+        
     @discardableResult
     public mutating func add(_ tm : Tm) -> Bool {
         func collect(_ tm : Tm) -> Bool {
@@ -67,10 +40,13 @@ public struct FreeVars {
                 } else {
                     _arities[v] = params.count
                 }
+                for p in params {
+                    guard collect(p) else { return false }
+                }
                 return true
             case let .const(_, binders: _, params: params):
                 for p in params {
-                    guard addAtomic(p) else { return false }
+                    guard collect(p) else { return false }
                 }
                 return true
             }
@@ -86,20 +62,6 @@ public struct FreeVars {
         return _arities[v] != nil
     }
     
-    @discardableResult
-    public mutating func addAtomic(_ freeVars : FreeVars) -> Bool {
-        var newArities = _arities
-        for (v, a) in freeVars.arities {
-            if let b = newArities[v] {
-                guard a == b else { return false }
-            } else {
-                newArities[v] = a
-            }
-        }
-        _arities = newArities
-        return true
-    }
-
     @discardableResult
     public mutating func add(_ freeVars : FreeVars) -> Bool {
         for (v, a) in freeVars.arities {
@@ -125,40 +87,33 @@ public struct FreeVars {
         _arities[v] = arity
         return v
     }
-    
-    public mutating func addFresh(_ tm : Tm) -> (fresh: Tm, renaming: TmVarRenaming)? {
         
-        var renaming = TmVarRenaming()
-                
-        func rename(_ v : Var, arity : Int) -> Var? {
+    public mutating func addFresh(_ tm : Tm, renaming : inout TmVarRenaming) -> Tm? {
+        switch tm {
+        case .bound: return tm
+        case let .free(v, params: params):
+            let freshParams = params.compactMap { p in addFresh(p, renaming: &renaming) }
+            guard freshParams.count == params.count else { return nil }
             if let w = renaming[v] {
-                guard self[w] == arity else { return nil }
-                return w
-            } else {
-                let w = addFresh(v, arity: arity)
-                renaming[v] = w
-                return w
-            }
-        }
-        
-        func make(_ tm : Tm) -> Tm? {
-            switch tm {
-            case .bound: return tm
-            case let .free(v, params: params):
-                let freshParams = params.compactMap(make)
-                guard freshParams.count == params.count else { return nil }
-                guard let w = rename(v, arity: params.count) else { return nil }
+                guard self[w] == params.count else { return nil }
                 return .free(w, params: freshParams)
-            case let .const(c, binders: binders, params: params):
-                let freshParams = params.compactMap(make)
-                guard freshParams.count == params.count else { return nil }
-                return .const(c, binders: binders, params: freshParams)
+            } else {
+                let w = addFresh(v, arity: params.count)
+                renaming[v] = w
+                return .free(w, params: freshParams)
             }
+        case let .const(c, binders: binders, params: params):
+            let freshParams = params.compactMap { p in addFresh(p, renaming: &renaming) }
+            guard freshParams.count == params.count else { return nil }
+            return .const(c, binders: binders, params: freshParams)
         }
-        
-        guard let freshTm = make(tm) else { return nil }
-        
-        return (fresh: freshTm, renaming: renaming)
     }
     
+    public mutating func addFresh(_ tm : Tm) -> (fresh: Tm, renaming: TmVarRenaming)? {
+        var renaming = TmVarRenaming()
+        guard let fresh = addFresh(tm, renaming: &renaming) else {
+            return nil
+        }
+        return (fresh: fresh, renaming: renaming)
+    }
 }
