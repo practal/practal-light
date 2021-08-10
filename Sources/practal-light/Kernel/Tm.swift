@@ -234,19 +234,7 @@ extension KernelContext {
         guard let v = tmOf(v) else { return false }
         return u == v
     }
-    
-    public func alpha_equivalent(_ u : Prop, _ v : Prop) -> Bool {
-        guard u.hyps.count == v.hyps.count else { return false }
-        guard u.concls.count == v.concls.count else { return false }
-        for (i, hyp) in u.hyps.enumerated() {
-            guard alpha_equivalent(hyp, v.hyps[i]) else { return false }
-        }
-        for (i, concl) in u.concls.enumerated() {
-            guard alpha_equivalent(concl, v.concls[i]) else { return false }
-        }
-        return true
-    }
-    
+        
     public func isWellformed(level : Int, _ tm : Tm) -> Bool {
         
         func check(level : Int, accessible : [Bool], _ tm : Tm) -> Bool {

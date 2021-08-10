@@ -7,11 +7,13 @@
 
 import Foundation
 
+public typealias Prop = Term
+
 public struct Theorem : Hashable {
     
     public let kc_uuid : UUID
     
-    public let prop : Prop
+    public let prop : Term
         
     fileprivate init(kc_uuid : UUID, prop : Prop) {
         self.kc_uuid = kc_uuid
@@ -96,13 +98,9 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         }
         return alpha_equivalent(prop, th.prop)
     }
-
-    private func prove(_ prover : Prover, _ prop : Term) -> Bool {
-        return prove(prover, Prop(prop))
-    }
     
-    private func prove(_ prover : Prover, _ props : [Term]) -> Bool {
-        return prove(prover, Prop(props))
+    private func prove(_ prover : Prover, _ props : [Prop]) -> Bool {
+        return props.allSatisfy { prop in prove(prover, prop) }
     }
 
     private func extend(_ addExtensions : [Ext], addAxioms : [Term] = [], mergeConstants : [Const : Def] = [:]) -> KernelContext {
@@ -117,8 +115,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
     }
             
     public func axiom(_ index : Int) -> Theorem {
-        let prop = Prop(axioms[index])
-        return Theorem(kc_uuid: uuid, prop: prop)
+        return Theorem(kc_uuid: uuid, prop: axioms[index])
     }
     
     public func declare(head : Head) -> KernelContext?
@@ -145,11 +142,11 @@ public struct KernelContext : Hashable, CustomStringConvertible {
             props.append(Term.mk_in_Prop(h))
         }
         for d in def.definitions {
-            let compatible = Prop(hyps: d.hyps + hyps, Term.mk_eq(d.body, body))
-            props.append(compatible.flatten())
+            let compatible = Term.mk_prop(hyps: d.hyps + hyps, Term.mk_eq(d.body, body))
+            props.append(compatible)
         }
-        guard prove(prover, Prop(props)) else { return nil }
-        let ax = Prop(hyps: hyps, Term.mk_eq(def.head.term, body)).flatten()
+        guard prove(prover, .mk_prop(props)) else { return nil }
+        let ax : Prop = .mk_prop(hyps: hyps, Term.mk_eq(def.head.term, body))
         def.definitions.append(DefCase(hyps: hyps, body: body))
         return extend([.define(const: const, hyps: hyps, body: body)], addAxioms: [ax], mergeConstants: [const: def])
     }
@@ -212,7 +209,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         else if from < to  {
             return Theorem(kc_uuid: chain[to].uuid, prop: th.prop)
         } else {
-            var current = th.prop.flatten()
+            var current = th.prop
             let exts = chain.extensions(from: to+1, to: from)
             let constants = chain[from].constants
             var i = exts.count - 1
@@ -238,7 +235,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
                     }
                 case let .define(const: const, hyps: hyps, body: body):
                     guard let head = constants[const]?.head, head.binders.count == 0  else { return nil }
-                    let d = Prop(hyps: hyps, [Term.mk_eq(head.term, body)]).flatten()
+                    let d = Prop.mk_prop(hyps: hyps, [Term.mk_eq(head.term, body)])
                     let vars = head.params.map { p in p.unappliedVar! }
                     current = Term.mk_imp(Term.mk_all(vars, d), current)
                 case let .seal(const: const):
@@ -249,7 +246,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
                 }
                 i -= 1
             }
-            return Theorem(kc_uuid: chain[to].uuid, prop: Prop(current))
+            return Theorem(kc_uuid: chain[to].uuid, prop: current)
         }
     }
         
@@ -267,17 +264,15 @@ public struct KernelContext : Hashable, CustomStringConvertible {
     public func substitute(_ substitution : Substitution, in thm : Theorem) -> Theorem? {
         guard isValid(thm) else { return nil }
         guard let subst = TmSubstitution(self, wellformed: substitution) else { return nil }
-        guard let hyps = substituteSafely(subst, in: thm.prop.hyps) else { return nil }
-        guard let concls = substituteSafely(subst, in: thm.prop.concls) else { return nil }
-        return Theorem(kc_uuid: uuid, prop: Prop(hyps: hyps, concls))
+        guard let prop = substituteSafely(subst, in: thm.prop) else { return nil }
+        return Theorem(kc_uuid: uuid, prop: prop)
     }
     
     public func substitute(_ subst : TmSubstitution, in thm : Theorem) -> Theorem? {
         guard isValid(thm) else { return nil }
         guard isWellformed(subst) else { return nil }
-        guard let hyps = substituteSafely(subst, in: thm.prop.hyps) else { return nil }
-        guard let concls = substituteSafely(subst, in: thm.prop.concls) else { return nil }
-        return Theorem(kc_uuid: uuid, prop: Prop(hyps: hyps, concls))
+        guard let prop = substituteSafely(subst, in: thm.prop) else { return nil }
+        return Theorem(kc_uuid: uuid, prop: prop)
 
     }
     
@@ -299,10 +294,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
             print("--- axiom: \(prop)")
             kc = kc.assume(prop) { kc, prop in
                 print("proof obligation: \(prop)")
-                guard let concl = prop.concl,
-                      let proof = Matching(kc: kc).proveByAxiom(term: concl)
-                      else
-                {
+                guard let proof = Matching(kc: kc).proveByAxiom(term: prop) else {
                     print("proof failed")
                     return nil
                 }
@@ -321,7 +313,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         introduce(.c_all, binders: [v("x")], params: tv("P", tv("x")))
         
         kc = kc.assume(.mk_in_Prop(.mk_in(tv("x"), tv("T")))) { kc, prop in
-            guard kc.isWellformed(prop.flatten()) else { return nil }
+            guard kc.isWellformed(prop) else { return nil }
             return Theorem(kc_uuid: kc.uuid, prop: prop)
         }!
         
