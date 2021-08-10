@@ -272,20 +272,21 @@ public struct TmSubstitution {
         }
         return varSubst(reversedTable)
     }
+    
+    public func isWellformed(_ kc : KernelContext) -> Bool {
+        guard bound.isEmpty else { return false }
+        return free.values.allSatisfy { twh in kc.isWellformed(twh) }
+    }
         
 }
 
 extension KernelContext {
     
-    public func isWellformed(level : Int, _ tm : Tm) -> Bool {
-        return true
-    }
-    
     public func isWellformed(_ twh : TmWithHoles) -> Bool {
-        return true
+        return isWellformed(level: twh.holes, twh.tm)
     }
     
     public func isWellformed(_ subst : TmSubstitution) -> Bool {
-        return true
+        return subst.isWellformed(self)
     }
 }

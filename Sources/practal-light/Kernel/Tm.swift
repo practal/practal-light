@@ -246,5 +246,28 @@ extension KernelContext {
         }
         return true
     }
+    
+    public func isWellformed(level : Int, _ tm : Tm) -> Bool {
+        
+        func check(level : Int, accessible : [Bool], _ tm : Tm) -> Bool {
+            switch tm {
+            case let .bound(v):
+                guard v < level else { return false }
+                return accessible[v]
+            case let .free(_, params: params):
+                return  params.allSatisfy { p in check(level: level, accessible: accessible, p) }
+            case let .const(c, binders: binders, params: params):
+                guard let head = constants[c]?.head else { return false }
+                guard head.binders.count == binders.count && head.params.count == params.count else { return false }
+                let sublevel = level + binders.count
+                for (i, p) in params.enumerated() {
+                    guard check(level: sublevel, accessible: accessible + head.accessible(param: i).reversed(), p) else { return false }
+                }
+                return true
+            }
+        }
+        
+        return check(level : level, accessible : [Bool](repeating: true, count: level), tm)
+    }
 
 }

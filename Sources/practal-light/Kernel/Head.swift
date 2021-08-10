@@ -93,6 +93,15 @@ public struct Head : Hashable, CustomStringConvertible {
         return vars
     }
     
+    public func accessible(param : Int) -> [Bool] {
+        let vars = selectBoundVars(param: param, binders: binders)
+        var acc = [Bool](repeating: false, count: binders.count)
+        for v in vars {
+            acc[binderIndex(v)!] = true
+        }
+        return acc
+    }
+    
     public var description: String {
         return term.description
     }
