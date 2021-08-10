@@ -362,8 +362,7 @@
             let tm = Tm.fromWellformedTerm(kc, term: term)!
             print("tm = \(tm)")
             var subst = TmSubstitution()
-            subst[Var("T")!] = TmWithHoles(.bound(1))
+            subst[Var("T")!] = TmWithHoles(holes: 0, .bound(1))
             print("subst = \(subst.apply(tm)!)")
-            //let tm =
         }
     }

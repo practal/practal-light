@@ -96,16 +96,14 @@ public struct Matching {
             case let (.free(v, params: params1), .const(c, _, params: _)):
                 guard let head = kc.constants[c]?.head else { return false }
                 let twh = TmWithHoles.constant(holes: params1.count, head: head, fresh: freshFreeVar)
-                let params1 = params1.map { p in p.adjust(level: task.level, delta: -task.level) }
-                guard let lhs = twh.fillHoles(params1)?.adjust(level: 0, delta: task.level) else { return false }
+                guard let lhs = twh.fillHoles(params1) else { return false }
                 guard addAndApply(v, twh) else { return false }
                 let task = Task(level: task.level, pattern: lhs, instance: task.instance)
                 tasks.append(task)
                 return true
             case let (.free(v1, params: params1), .free(v2, params: params2)):
                 let twh = TmWithHoles.variable(holes: params1.count, var: v2, numargs: params2.count, fresh: freshFreeVar)
-                let params1 = params1.map { p in p.adjust(level: task.level, delta: -task.level) }
-                guard let lhs = twh.fillHoles(params1)?.adjust(level: 0, delta: task.level) else { return false }
+                guard let lhs = twh.fillHoles(params1) else { return false }
                 guard addAndApply(v1, twh) else { return false }
                 let task = Task(level: task.level, pattern: lhs, instance: task.instance)
                 tasks.append(task)
@@ -115,13 +113,13 @@ public struct Matching {
         
         while !tasks.isEmpty {
             let task = tasks.removeLast()
-            guard solveTask(task) else { return nil }
+            guard solveTask(task) else {
+                return nil
+            }
         }
                 
         result.restrict(pattern.freeVars())
-        
-        let reverseRenaming = TmSubstitution.reverseVarSubst(instanceRenaming)
-        guard result.compose(reverseRenaming) else { return nil }
+        result.compose(instanceRenaming.reversed())
         
         return result
     

@@ -23,13 +23,13 @@ public struct TermWithHoles {
 
 public typealias Substitution = [Var : TermWithHoles]
 
-public struct TmWithHoles {
+public struct TmWithHoles : CustomStringConvertible {
     
     public let holes : Int
     
     public let tm : Tm
     
-    public init(holes : Int = 0, _ tm : Tm) {
+    public init(holes : Int, _ tm : Tm) {
         self.holes = holes
         self.tm = tm
     }
@@ -39,13 +39,19 @@ public struct TmWithHoles {
         var subst = TmSubstitution()
         holes = termWithHoles.holes.count
         for (i, v) in termWithHoles.holes.enumerated() {
-            subst[v] = TmWithHoles(.bound(i))
+            subst[v] = TmWithHoles(holes: 0, .bound(i))
         }
         if let tm = subst.apply(tm) {
             self.tm = tm
         } else {
             return nil
         }
+    }
+    
+    public func incrementDangling(delta : Int) -> TmWithHoles {
+        guard delta >= 0 else { fatalError() }
+        let atm = tm.incrementDangling(level: holes, delta: delta)
+        return TmWithHoles(holes: holes, atm)
     }
     
     public func fillHoles() -> Tm? {
@@ -57,9 +63,9 @@ public struct TmWithHoles {
         guard params.count == holes else { return nil }
         var subst = TmSubstitution()
         for (i, p) in params.enumerated() {
-            subst[i] = TmWithHoles(p)
+            subst[i] = TmWithHoles(holes: 0, p)
         }
-        return subst.apply(level: params.count, tm)
+        return subst.apply(level: holes, tm)
     }
     
     public static func projection(holes : Int, _ k : Int) -> TmWithHoles {
@@ -96,7 +102,44 @@ public struct TmWithHoles {
         let tm = Tm.free(v, params: params)
         return TmWithHoles(holes: holes, tm)
     }
+    
+    public var description : String {
+        return "([\(holes)] \(tm))"
+    }
 
+}
+
+public struct TmVarRenaming {
+    
+    private let table : [Var : Var]
+    
+    public init(_ table : [Var : Var]) {
+        self.table = table
+    }
+    
+    public func apply(_ tm : Tm) -> Tm {
+        switch tm {
+        case .bound: return tm
+        case let .free(v, params: params):
+            let w = table[v, default: v]
+            return .free(w, params: params.map(apply))
+        case let .const(c, binders: binders, params: params):
+            return .const(c, binders: binders, params: params.map(apply))
+        }
+    }
+    
+    public func apply(_ twh : TmWithHoles) -> TmWithHoles {
+        return TmWithHoles(holes: twh.holes, apply(twh.tm))
+    }
+
+    public func reversed() -> TmVarRenaming {
+        var rtable : [Var : Var] = [:]
+        for (v, w) in table {
+            rtable[w] = v
+        }
+        return TmVarRenaming(rtable)
+    }
+    
 }
 
 public struct TmSubstitution {
@@ -165,16 +208,27 @@ public struct TmSubstitution {
         var newFree : [Var : TmWithHoles] = [:]
         var newBound : [Int : TmWithHoles] = [:]
         for (v, t) in free {
-            guard let s = subst.apply(t) else { return false }
+            guard let s = subst.apply(t) else {
+                print("could not substitute in \(t)")
+                return false
+            }
             newFree[v] = s
         }
         for (i, t) in bound {
-            guard let s = subst.apply(t) else { return false }
+            guard let s = subst.apply(t) else {
+                print("could not substitute in \(t)")
+                return false
+            }
             newBound[i] = s
         }
         free = newFree
         bound = newBound
         return true
+    }
+    
+    public mutating func compose(_ renaming : TmVarRenaming) {
+        free = free.mapValues { t in renaming.apply(t) }
+        bound = bound.mapValues { t in renaming.apply(t) }
     }
     
     private func app(level : Int, _ tms : [Tm]) -> [Tm]? {
@@ -187,15 +241,16 @@ public struct TmSubstitution {
         switch tm {
         case let .bound(index):
             if index >= level, let twh = bound[index - level] {
-                return twh.fillHoles()?.adjust(level: 0, delta: level)
+                let twh = twh.incrementDangling(delta: level)
+                return twh.fillHoles()
             } else {
                 return tm
             }
         case let .free(v, params: params):
             guard let params = app(level: level, params) else { return nil }
             if let twh = free[v] {
-                let adjusted = params.map { p in p.adjust(level: level, delta: -level) }
-                return twh.fillHoles(adjusted)?.adjust(level: 0, delta: level)
+                let twh = twh.incrementDangling(delta: level)
+                return twh.fillHoles(params)
             } else {
                 return .free(v, params: params)
             }
@@ -206,7 +261,7 @@ public struct TmSubstitution {
     }
     
     public static func varSubst(_ table : [Var : Var]) -> TmSubstitution {
-        let free = table.mapValues { v in TmWithHoles(Tm.free(v, params: [])) }
+        let free = table.mapValues { v in TmWithHoles(holes: 0, Tm.free(v, params: [])) }
         return TmSubstitution(free: free)
     }
     

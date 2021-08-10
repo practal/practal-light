@@ -181,17 +181,18 @@ extension Tm {
     }
     
     // Adjusts all dangling (according to `level`) bound variables  by `delta`.
-    public func adjust(level : Int, delta : Int) -> Tm {
+    public func incrementDangling(level : Int, delta : Int) -> Tm {
+        guard delta >= 0 else { fatalError() }
         switch self {
         case let .bound(index):
             if index < level { return self }
             else { return .bound(index + delta) }
         case let .free(v, params: params):
-            let sparams = params.map { p in p.adjust(level: level, delta: delta) }
+            let sparams = params.map { p in p.incrementDangling(level: level, delta: delta) }
             return .free(v, params: sparams)
         case let .const(c, binders: binders, params: params):
             let sublevel = level + binders.count
-            let sparams = params.map { p in p.adjust(level: sublevel, delta: delta) }
+            let sparams = params.map { p in p.incrementDangling(level: sublevel, delta: delta) }
             return .const(c, binders: binders, params: sparams)
         }
     }
@@ -214,10 +215,10 @@ extension Tm {
         }
     }
     
-    public func freshFreeVars(fresh : (Var) -> Var) -> (fresh: Tm, renaming: [Var : Var]) {
+    public func freshFreeVars(fresh : (Var) -> Var) -> (fresh: Tm, renaming: TmVarRenaming) {
         var renaming : [Var : Var] = [:]
         let tm = freshFreeVars(fresh: fresh, renaming: &renaming)
-        return (fresh: tm, renaming: renaming)
+        return (fresh: tm, renaming: TmVarRenaming(renaming))
     }
     
 }

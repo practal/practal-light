@@ -294,26 +294,20 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         func tv(_ name : String, _ params : Term...) -> Term {
             return .variable(Var(name)!, params: params)
         }
-        
-        func prove_in_is_Prop(kc : KernelContext, prop : Prop) -> Theorem? {
-            guard prop.isSimple else { return nil }
-            guard let prop = Term.dest_in_Prop(prop.concl!) else { return nil }
-            guard let (op, left, right) = Term.dest_binary(prop), op == .c_in else {
-                return nil
-            }
-            let ax = kc.axiom(0)
-            let subst = [v("x") : TermWithHoles([], left), v("T") : TermWithHoles([], right)]
-            return kc.substitute(subst, in: ax)
-        }
-        
+                
         func axiom(_ prop : Term) {
             print("--- axiom: \(prop)")
             kc = kc.assume(prop) { kc, prop in
                 print("proof obligation: \(prop)")
-                guard let concl = prop.concl else { return nil }
-                guard let proof = Matching(kc: kc).proveByAxiom(term: concl) else { return nil }
+                guard let concl = prop.concl,
+                      let proof = Matching(kc: kc).proveByAxiom(term: concl)
+                      else
+                {
+                    print("proof failed")
+                    return nil
+                }
+                print("found proof")
                 return proof.thm
-                //return prove_in_is_Prop(kc: kc, prop: prop)
             }!
         }
         
@@ -338,7 +332,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         axiom(.mk_in_Prop(.mk_ex(v("x"), tv("P", tv("x")))))
         axiom(.mk_in_Prop(.mk_all(v("x"), tv("P", tv("x")))))
         
-        //axiom(.mk_eq(tv("x"), tv("x")))
+        axiom(.mk_eq(tv("x"), tv("x")))
         
         return kc
     }
