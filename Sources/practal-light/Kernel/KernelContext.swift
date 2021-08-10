@@ -303,6 +303,34 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         guard alpha_equivalent(hyp.prop, left) else { return nil }
         return mk_thm(right)
     }
+    
+    public func allIntro(_ x : Var, _ thm : Theorem) -> Theorem? {
+        fatalError()
+    }
+    
+    public func allElim(_ x : Term, _ thm : Theorem) -> Theorem? {
+        fatalError()
+    }
+    
+    public func exIntro(vars : [Var], _ subst : Substitution, prop : Term, _ thm : Theorem) -> Theorem? {
+        let varsSet = Set(vars)
+        guard varsSet.count == vars.count, varsSet == Set(subst.keys), isValid(thm) else { return nil }
+        guard let subst = TmSubstitution(self, wellformed: subst) else { return nil }
+        guard let p = Tm.fromWellformedTerm(self, term: prop) else { return nil }
+        guard let arities = p.freeVarsWithArity() else { return nil }
+        for v in vars {
+            if let a = arities[v] {
+                guard a == 0 else { return nil }
+            }
+        }
+        guard let sprop = subst.apply(p) else { return nil }
+        guard tmOf(thm.prop) == sprop else { return nil }
+        var prop = prop
+        for x in vars.reversed() {
+            prop = .mk_ex(x, prop)
+        }
+        return mk_thm(prop)
+    }
 
     public static func root() -> KernelContext {
         var kc = KernelContext(parent: nil, extensions: [], axioms: [], constants: [:])

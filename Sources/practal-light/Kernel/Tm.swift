@@ -111,30 +111,50 @@ extension Tm {
         return from(level: 0, boundVars: [:], term: term)
     }
     
-    public func collectFreeVars(_ vars : inout Set<Var>) {
+    public func collectFreeVars(_ vars : inout [Var : Int]) -> Bool {
         switch self {
-        case .bound: break
+        case .bound: return true
         case let .free(v, params: params):
-            vars.insert(v)
-            for p in params {
-                p.collectFreeVars(&vars)
+            var ok : Bool
+            if let a = vars[v] {
+                ok = a == params.count
+            } else {
+                vars[v] = params.count
+                ok = true
             }
+            for p in params {
+                if (!p.collectFreeVars(&vars)) {
+                    ok = false
+                }
+            }
+            return ok
         case let .const(_, binders: _, params: params):
+            var ok = true
             for p in params {
-                p.collectFreeVars(&vars)
+                if (!p.collectFreeVars(&vars)) {
+                    ok = false
+                }
             }
+            return ok
         }
     }
     
-    public func freeVars() -> Set<Var> {
-        var vars : Set<Var> = []
-        collectFreeVars(&vars)
+    public func freeVarsWithArity() -> [Var : Int]? {
+        var vars : [Var : Int] = [:]
+        guard collectFreeVars(&vars) else { return nil }
         return vars
+    }
+    
+    public func freeVars() -> Set<Var> {
+        var vars : [Var : Int] = [:]
+        let _ = collectFreeVars(&vars)
+        return Set(vars.keys)
     }
     
     /// Returns a term with name binders which is equivalent to this De Bruijn term.
     /// The returned term is guaranteed to be wellformed in any KernelContext in which this term is wellformed.
     /// If there are dangling bound variables, `nil` is returned.
+    /// `nil` may also be returned if the term is not wellformed, but this cannot be relied upon.
     public func term() -> Term? {
         
         let frees = freeVars()
@@ -237,12 +257,19 @@ extension KernelContext {
         
     public func isWellformed(level : Int, _ tm : Tm) -> Bool {
         
+        var frees : [Var : Int] = [:]
+        
         func check(level : Int, accessible : [Bool], _ tm : Tm) -> Bool {
             switch tm {
             case let .bound(v):
                 guard v < level else { return false }
                 return accessible[v]
-            case let .free(_, params: params):
+            case let .free(v, params: params):
+                if let a = frees[v] {
+                    guard a == params.count else { return false }
+                } else {
+                    frees[v] = params.count
+                }
                 return  params.allSatisfy { p in check(level: level, accessible: accessible, p) }
             case let .const(c, binders: binders, params: params):
                 guard let head = constants[c]?.head else { return false }
