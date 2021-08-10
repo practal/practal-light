@@ -244,5 +244,18 @@ public extension Term {
         default: return nil
         }
     }
+    
+    static func mk_prop(hyps: [Term] = [], concls: [Term]) -> Term {
+        let Concl = Term.mk_ands(concls)
+        if hyps.isEmpty {
+            return Concl
+        } else {
+            let Hyp = Term.mk_ands(hyps)
+            return Term.mk_imp(Hyp, Concl)
+        }
+    }
 
+    static func mk_prop(hyps: [Term] = [], concl: Term) -> Term {
+        return mk_prop(hyps: hyps, concls: [concl])
+    }
 }
