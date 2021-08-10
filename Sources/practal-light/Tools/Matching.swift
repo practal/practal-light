@@ -26,20 +26,12 @@ public struct Matching {
         
     public let kc : KernelContext
     
-    public func match(pattern : Tm, instance : Tm) -> TmSubstitution? {
+    public func match(pattern : Tm, instance : Tm, frees : inout FreeVars) -> TmSubstitution? {
         
-        var usedFreeVars = pattern.freeVars().union(instance.freeVars())
+        guard frees.add(pattern) else { return nil }
         
-        func freshFreeVar(_ v : Var) -> Var {
-            var v = v
-            while usedFreeVars.contains(v) {
-                v = v.increment()
-            }
-            usedFreeVars.insert(v)
-            return v
-        }
+        guard let (instance, instanceRenaming) = frees.addFresh(instance) else { return nil }
         
-        let (instance, instanceRenaming) = instance.freshFreeVars(fresh: freshFreeVar)
         let constantFreeVars = instance.freeVars()
 
         var result = TmSubstitution()
@@ -95,14 +87,14 @@ public struct Matching {
                 return addAndApply(v, twh)
             case let (.free(v, params: params1), .const(c, _, params: _)):
                 guard let head = kc.constants[c]?.head else { return false }
-                let twh = TmWithHoles.constant(holes: params1.count, head: head, fresh: freshFreeVar)
+                let twh = TmWithHoles.constant(holes: params1.count, head: head) { v, a in frees.addFresh(v, arity: a) }
                 guard let lhs = twh.fillHoles(params1) else { return false }
                 guard addAndApply(v, twh) else { return false }
                 let task = Task(level: task.level, pattern: lhs, instance: task.instance)
                 tasks.append(task)
                 return true
             case let (.free(v1, params: params1), .free(v2, params: params2)):
-                let twh = TmWithHoles.variable(holes: params1.count, var: v2, numargs: params2.count, fresh: freshFreeVar)
+                let twh = TmWithHoles.variable(holes: params1.count, var: v2, numargs: params2.count) { v, a in frees.addFresh(v, arity: a) }
                 guard let lhs = twh.fillHoles(params1) else { return false }
                 guard addAndApply(v1, twh) else { return false }
                 let task = Task(level: task.level, pattern: lhs, instance: task.instance)
@@ -123,6 +115,11 @@ public struct Matching {
         
         return result
     
+    }
+    
+    public func match(pattern : Tm, instance : Tm) -> TmSubstitution? {
+        var frees = FreeVars()
+        return match(pattern: pattern, instance: instance, frees: &frees)
     }
     
 }

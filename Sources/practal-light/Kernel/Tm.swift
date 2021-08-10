@@ -217,30 +217,6 @@ extension Tm {
         }
     }
     
-    public func freshFreeVars(fresh : (Var) -> Var, renaming : inout [Var : Var]) -> Tm {
-        switch self {
-        case .bound: return self
-        case let .free(v, params: params):
-            let params = params.map { p in p.freshFreeVars(fresh: fresh, renaming: &renaming) }
-            if let w = renaming[v] {
-                return .free(w, params: params)
-            } else {
-                let w = fresh(v)
-                renaming[v] = w
-                return .free(w, params: params)
-            }
-        case let .const(c, binders: binders, params: params):
-            let params = params.map { p in p.freshFreeVars(fresh: fresh, renaming: &renaming) }
-            return .const(c, binders: binders, params: params)
-        }
-    }
-    
-    public func freshFreeVars(fresh : (Var) -> Var) -> (fresh: Tm, renaming: TmVarRenaming) {
-        var renaming : [Var : Var] = [:]
-        let tm = freshFreeVars(fresh: fresh, renaming: &renaming)
-        return (fresh: tm, renaming: TmVarRenaming(renaming))
-    }
-    
 }
 
 extension KernelContext {
@@ -255,9 +231,7 @@ extension KernelContext {
         return u == v
     }
         
-    public func isWellformed(level : Int, _ tm : Tm) -> Bool {
-        
-        var frees : [Var : Int] = [:]
+    public func isWellformed(level : Int, _ tm : Tm, _ frees : inout FreeVars) -> Bool {
         
         func check(level : Int, accessible : [Bool], _ tm : Tm) -> Bool {
             switch tm {
@@ -265,11 +239,7 @@ extension KernelContext {
                 guard v < level else { return false }
                 return accessible[v]
             case let .free(v, params: params):
-                if let a = frees[v] {
-                    guard a == params.count else { return false }
-                } else {
-                    frees[v] = params.count
-                }
+                guard frees.add(v, arity: params.count) else { return false}
                 return  params.allSatisfy { p in check(level: level, accessible: accessible, p) }
             case let .const(c, binders: binders, params: params):
                 guard let head = constants[c]?.head else { return false }

@@ -76,7 +76,7 @@ public struct TmWithHoles : CustomStringConvertible {
         return TmWithHoles(holes: holes, .bound(bound + holes))
     }
     
-    public static func constant(holes : Int, head : Head, fresh : (Var) -> Var) -> TmWithHoles {
+    public static func constant(holes : Int, head : Head, fresh : (Var, Int) -> Var) -> TmWithHoles {
         var params : [Tm] = []
         let binders = head.binders
         let level = binders.count
@@ -84,19 +84,21 @@ public struct TmWithHoles : CustomStringConvertible {
         for (i, p) in head.params.enumerated() {
             let selected = head.selectBoundVars(param: i, binders: binders)
             let args : [Tm] = selected.map { b in Tm.bound(head.binderIndex(b)!) }
-            let F = Tm.free(fresh(p.var!), params: args + holeArgs)
+            let ps = args + holeArgs
+            let F = Tm.free(fresh(p.var!, ps.count), params: ps)
             params.append(F)
         }
         let tm = Tm.const(head.const, binders: binders, params: params)
         return TmWithHoles(holes: holes, tm)
     }
     
-    public static func variable(holes : Int, `var` v: Var, numargs : Int, fresh : (Var) -> Var) -> TmWithHoles {
+    public static func variable(holes : Int, `var` v: Var, numargs : Int, fresh : (Var, Int) -> Var) -> TmWithHoles {
         var params : [Tm] = []
         let holeArgs = (0 ..< holes).map { i in Tm.bound(i)}
         for k in 0 ..< numargs {
             let name = "\(v.name.id)-arg-\(k)"
-            let p = Tm.free(Var(name)!, params: holeArgs)
+            let v = fresh(Var(name)!, holeArgs.count)
+            let p = Tm.free(v, params: holeArgs)
             params.append(p)
         }
         let tm = Tm.free(v, params: params)
@@ -111,9 +113,9 @@ public struct TmWithHoles : CustomStringConvertible {
 
 public struct TmVarRenaming {
     
-    private let table : [Var : Var]
+    private var table : [Var : Var]
     
-    public init(_ table : [Var : Var]) {
+    public init(_ table : [Var : Var] = [:]) {
         self.table = table
     }
     
@@ -140,6 +142,15 @@ public struct TmVarRenaming {
         return TmVarRenaming(rtable)
     }
     
+    public subscript(_ v : Var) -> Var? {
+        get {
+            return table[v]
+        }
+        set {
+            table[v] = newValue
+        }
+    }
+        
 }
 
 public struct TmSubstitution {
@@ -273,20 +284,26 @@ public struct TmSubstitution {
         return varSubst(reversedTable)
     }
     
-    public func isWellformed(_ kc : KernelContext) -> Bool {
+    public func isWellformed(_ kc : KernelContext, _ frees : inout FreeVars) -> Bool {
         guard bound.isEmpty else { return false }
-        return free.values.allSatisfy { twh in kc.isWellformed(twh) }
+        return free.values.allSatisfy { twh in kc.isWellformed(twh, &frees) }
     }
         
 }
 
 extension KernelContext {
     
+    public func isWellformed(_ twh : TmWithHoles, _ frees : inout FreeVars) -> Bool {
+        return isWellformed(level: twh.holes, twh.tm, &frees)
+    }
+    
     public func isWellformed(_ twh : TmWithHoles) -> Bool {
-        return isWellformed(level: twh.holes, twh.tm)
+        var frees = FreeVars()
+        return isWellformed(twh, &frees)
     }
     
     public func isWellformed(_ subst : TmSubstitution) -> Bool {
-        return subst.isWellformed(self)
+        var frees = FreeVars()
+        return subst.isWellformed(self, &frees)
     }
 }
