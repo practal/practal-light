@@ -305,11 +305,18 @@ public struct KernelContext : Hashable, CustomStringConvertible {
     }
     
     public func allIntro(_ x : Var, _ thm : Theorem) -> Theorem? {
-        fatalError()
+        guard isValid(thm) else { return nil }
+        return mk_thm(.mk_all(x, thm.prop))
     }
     
     public func allElim(_ x : Term, _ thm : Theorem) -> Theorem? {
-        fatalError()
+        guard isValid(thm) else { return nil }
+        guard let (y, b) = Term.dest_all(thm.prop) else { return nil }
+        let subst = [y : TermWithHoles([], x)]
+        guard let tmSubst = TmSubstitution(self, wellformed: subst) else { return nil }
+        guard let tm = tmOf(b) else { return nil }
+        guard let prop = tmSubst.apply(tm)?.term() else { return nil }
+        return mk_thm(prop)
     }
     
     public func exIntro(vars : [Var], _ subst : Substitution, prop : Term, _ thm : Theorem) -> Theorem? {

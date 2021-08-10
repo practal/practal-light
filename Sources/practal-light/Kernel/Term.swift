@@ -222,6 +222,15 @@ public extension Term {
     static func mk_all(_ x : Var, _ body : Term) -> Term {
         return .constant(Const.c_all, binders: [x], params: [body])
     }
+    
+    static func dest_all(_ term : Term) -> (Var, Term)? {
+        switch term {
+        case let .constant(Const.c_all, binders: binders, params: params):
+            guard let x = binders.first, let body = params.first else { return nil }
+            return (x, body)
+        default: return nil
+        }
+    }
 
     static func mk_all<Vars:Collection>(_ vars : Vars, _ body : Term) -> Term where Vars.Element == Var {
         var t = body
