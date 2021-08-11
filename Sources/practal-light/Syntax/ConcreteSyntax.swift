@@ -6,6 +6,8 @@
 
 import Foundation
 
+public typealias Syntax = [(SyntaxPattern, [ConcreteSyntax])]
+
 public struct ConcreteSyntax : CustomStringConvertible, Hashable {
     
     public enum Priority : Hashable {

@@ -48,6 +48,14 @@ public struct KCChain {
         return contexts[index]
     }
     
+    public var current : KernelContext {
+        return _contexts.last!
+    }
+    
+    public var count : Int {
+        return _contexts.count
+    }
+    
     internal func extensions(from : Int, to : Int) -> [KernelContext.Ext] {
         var exts : [KernelContext.Ext] = []
         for i in from ... to {

@@ -48,7 +48,7 @@ public final class Theory {
                 let p = SyntaxPattern.from(constSyntax.abstractSyntax.term)
                 patterns.append((p, constSyntax.concreteSyntaxes))
             }
-            _parser = PractalExprParser(patterns: patterns)
+            _parser = PractalExprParser(syntax: patterns)
             _printer = PrettyPrinter(patterns: patterns)
             dirtySyntax = false
         }
