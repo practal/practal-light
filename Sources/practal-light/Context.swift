@@ -31,7 +31,7 @@ public final class Context {
         }
     }
     
-    public var kernelContext : KernelContext {
+    public var kernel : KernelContext {
         return kcc.current
     }
     
@@ -41,14 +41,39 @@ public final class Context {
     
     @discardableResult
     public func addSyntax(_ pattern : SyntaxPattern, _ concreteSyntax : ConcreteSyntax) -> Bool {
-        guard pattern.isPattern else { return false }
-        
-        fatalError()
+        guard pattern.isPattern else {
+            print("pattern is not a pattern")
+            return false
+        }
+        let vars = pattern.vars()
+        let concreteSyntax = concreteSyntax.selectVars { v in vars.contains(v) }
+        guard !concreteSyntax.hasDuplicateVarOccurrences else {
+            print("concrete syntax has duplicate variable occurrences")
+            return false
+        }
+        guard Set(concreteSyntax.vars).count == vars.count else {
+            print("some free variables of the abstract syntax do not occur in the concrete syntax")
+            return false
+        }
+        syntax.append((pattern, [concreteSyntax]))
+        dirty_syntax = true
+        return true
+    }
+    
+    public var parser : PractalExprParser {
+        refresh()
+        return _parser
+    }
+    
+    public var printer : PrettyPrinter {
+        refresh()
+        return _printer
     }
     
     @discardableResult
-    public func extend(_ extension: (Context) -> KernelContext?) -> Bool {
-        fatalError()
+    public func extend(_ op: (Context) -> KernelContext?) -> Bool {
+        guard let kc = op(self) else { return false }
+        return kcc.append(kc)
     }
     
 }
