@@ -17,7 +17,7 @@ public final class Context {
     private var _parser : PractalExprParser
     private var _printer : PrettyPrinter
 
-    public init(_ kc : KernelContext) {
+    fileprivate init(_ kc : KernelContext) {
         kcc = KCChain(kc)
         syntax = []
         dirty_syntax = true
@@ -35,10 +35,6 @@ public final class Context {
     
     public var kernel : KernelContext {
         return kcc.current
-    }
-    
-    convenience public init() {
-        self.init(KernelContext.root())
     }
     
     @discardableResult
@@ -160,4 +156,27 @@ extension Context {
         return (const, axiom)
     }
 
+}
+
+extension Context {
+    
+    public static func root() -> Context {
+        let kc = KernelContext.root()
+        let context = Context(kc)
+        
+        func add_syntax(const : Const, syntax : String, priority : Float? = nil) {
+            guard context.addSyntax(const: const, syntax: syntax, priority: ConcreteSyntax.Priority.from(priority, default: .Atomic)) else { fatalError() }
+        }
+        
+        add_syntax(const: Const.c_Prop, syntax: "ℙ")
+        add_syntax(const: Const.c_eq, syntax: "x = y", priority: ConcreteSyntax.REL_PRIO)
+        add_syntax(const: .c_true, syntax: "⊤")
+        add_syntax(const: .c_in, syntax: "x : T", priority: ConcreteSyntax.REL_PRIO)
+        add_syntax(const: .c_and, syntax: "`p ∧ q", priority: ConcreteSyntax.LOGIC_PRIO + ConcreteSyntax.AND_RPRIO)
+        add_syntax(const: .c_imp, syntax: "p ⟶ `q", priority: ConcreteSyntax.LOGIC_PRIO + ConcreteSyntax.IMP_RPRIO)
+        add_syntax(const: .c_all, syntax: "∀ x. `P", priority: ConcreteSyntax.BINDER_PRIO)
+        add_syntax(const: .c_ex, syntax: "∃ x. `P", priority: ConcreteSyntax.BINDER_PRIO)
+        
+        return context
+    }
 }
