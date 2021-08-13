@@ -37,6 +37,14 @@ public struct Head : Hashable, CustomStringConvertible {
         self.params = params
     }
     
+    public init?(_ term : Term) {
+        switch term {
+        case let .constant(const, binders: binders, params: params):
+            self.init(const: const, binders: binders, params: params)
+        case .variable: return nil
+        }
+    }
+    
     public var term : Term {
         return .constant(const, binders: binders, params: params)
     }

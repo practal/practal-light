@@ -7,6 +7,8 @@
 
 import Foundation
 
+public typealias AxiomID = Int
+
 public final class Context {
         
     private var kcc : KCChain
@@ -56,6 +58,7 @@ public final class Context {
             return false
         }
         syntax.append((pattern, [concreteSyntax]))
+        //print("Added pattern: \(syntax.last!)")
         dirty_syntax = true
         return true
     }
@@ -76,4 +79,85 @@ public final class Context {
         return kcc.append(kc)
     }
     
+}
+
+extension Context {
+    
+    public func isWellformed(_ term : Term) -> Bool {
+        return kernel.isWellformed(term)
+    }
+    
+    public func parse(_ expr : String) -> Term? {
+        return parser.parse(expr)
+    }
+    
+    public func pretty(_ term : Term) -> String {
+        return printer.printTerm(term)
+    }
+    
+    public func addSyntax(const : Const, syntax : String, priority : ConcreteSyntax.Priority) -> Bool {
+        guard let head = kernel.constants[const]?.head else { return false }
+        let pattern = SyntaxPattern.from(head.term)
+        guard let css = parser.parse(css: syntax) else {
+            print("Could not parse concrete syntax spec '\(syntax)'")
+            return false
+        }
+        return addSyntax(pattern, css.withPriority(priority))
+    }
+    
+    public func declare(_ constant : Term) -> Const? {
+        guard let head = Head(constant) else { return nil }
+        guard (extend { context in
+            context.kernel.declare(head: head)
+        }) else { return nil }
+        return head.const
+    }
+    
+    // todo: make this an atomic operation that either completely fails or completely succeeds
+    public func declare(_ constant : String, syntax : [String], priority : ConcreteSyntax.Priority = .None) -> Const? {
+        guard let parsed = parse(constant) else { return nil }
+        guard let const = declare(parsed) else { return nil }
+        for s in syntax {
+            guard addSyntax(const: const, syntax: s, priority: priority) else { return nil }
+        }
+        return const
+    }
+    
+    public func assume(_ prop : Term, prover : ContextProver = Prover.fail) -> AxiomID? {
+        guard (extend { context in
+            context.kernel.assume(prop) { _, prop in
+                prover.prove(context, prop)
+            }
+        }) else { return nil }
+        return kernel.axioms.count - 1
+    }
+    
+    public func assume(_ prop : String, prover : ContextProver = Prover.fail) -> AxiomID? {
+        guard let prop = parse(prop) else { return nil }
+        return assume(prop, prover: prover)
+    }
+    
+    public func define(const : Const, hyps : [Term], body : Term, prover : ContextProver = Prover.fail) -> AxiomID? {
+        guard (extend { context in
+            return context.kernel.define(const: const, hyps: hyps, body: body) { _, prop in
+                return prover.prove(context, prop)
+            }
+        }) else { return nil }
+        return kernel.axioms.count - 1
+    }
+    
+    public func seal(const : Const) -> Bool {
+        return extend { context in
+            return context.kernel.seal(const: const)
+        }
+    }
+
+    public func def(_ constant : String, _ definition : String, syntax : [String], priority : ConcreteSyntax.Priority = .None) -> (Const, AxiomID)? {
+        guard let body = parse(definition) else { return nil }
+        guard let const = declare(constant, syntax: syntax, priority: priority) else { return nil }
+        guard let axiom = define(const: const, hyps: [], body: body) else { return nil }
+        guard seal(const: const) else { return nil }
+        return (const, axiom)
+    }
+
 }

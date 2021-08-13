@@ -158,7 +158,8 @@
                 XCTAssertNotNil(theory.checkWellformedness(t))
                 print("introduce: \(theory.pretty(t))")
             }
-            
+
+        
             func theorem(_ expr : String) {
                 let t = theory.parse(expr)
                 XCTAssertNotNil(theory.checkWellformedness(t))
@@ -347,6 +348,63 @@
             axiom("⊤ ⟶ ⊤")
             axiom("(⊤ ⟶ ⊥) = ⊥")
             axiom("(⊤ ⟶ nil) = ⊥")
+        }
+        
+        func testPracticalTypesNew() {
+            let CONTROL_PRIO : Float = 0
+            let BINDER_PRIO : Float = 10
+            let LOGIC_PRIO : Float = 20
+            let REL_PRIO : Float = 30
+            let TYPE_PRIO : Float = 40
+            //let ARITH_PRIO : Float = 50
+            let APP_PRIO : Float = 60
+            
+            let IMP_RPRIO : Float = 0.1
+            let OR_RPRIO : Float = 0.2
+            let AND_RPRIO : Float = 0.3
+            let NOT_RPRIO : Float = 0.4
+            
+            let UNION_RPRIO : Float = 0.1
+            let FUN_RPRIO : Float = 0.2
+            let BINARY_UNION_RPRIO : Float = 0.3
+            let BINARY_INTERSECTION_RPRIO : Float = 0.4
+            let TYPE_RPRIO : Float = 0.5
+                        
+            let context = Context()
+            print(context.kernel.description)
+
+            func show(_ expr : String) {
+                let t = context.parse(expr)!
+                XCTAssertTrue(context.isWellformed(t))
+                print("pretty: \(context.pretty(t)), raw: \(t)")
+            }
+            
+            func add_syntax(const : Const, syntax : String, priority : Float? = nil) {
+                XCTAssertTrue(context.addSyntax(const: const, syntax: syntax, priority: ConcreteSyntax.Priority.from(priority, default: .Atomic)))
+            }
+ 
+            add_syntax(const: Const.c_Prop, syntax: "ℙ")
+            show("ℙ")
+            
+            add_syntax(const: Const.c_eq, syntax: "x = y", priority: REL_PRIO)
+            show("x = ℙ")
+ 
+            add_syntax(const: .c_true, syntax: "⊤")
+            show("⊤")
+            
+            add_syntax(const: .c_in, syntax: "x : T", priority: REL_PRIO)
+            show("⊤ : ℙ")
+
+            add_syntax(const: .c_and, syntax: "`p ∧ q", priority: LOGIC_PRIO + AND_RPRIO)
+            show("a ∧ ⊤ ∧ x")
+
+            add_syntax(const: .c_imp, syntax: "p ⟶ `q", priority: LOGIC_PRIO + IMP_RPRIO)
+            show("r ∧ d ⟶ a ∧ ⊤ ∧ x ⟶ i ∧ j")
+
+            add_syntax(const: .c_all, syntax: "∀ x. `P", priority: BINDER_PRIO)
+            add_syntax(const: .c_ex, syntax: "∃ x. `P", priority: BINDER_PRIO)
+            show("∀ x. ∃ y. x = y")
+
         }
         
         func testKernelContext() {
