@@ -101,6 +101,10 @@ extension Context {
         return addSyntax(pattern, css.withPriority(priority))
     }
     
+    public func addSyntax(const : Const, syntax : String, priority : Float? = nil) -> Bool {
+        return addSyntax(const: const, syntax: syntax, priority: ConcreteSyntax.Priority.from(priority, default: .Atomic))
+    }
+    
     public func declare(_ constant : Term) -> Const? {
         guard let head = Head(constant) else { return nil }
         guard (extend { context in
@@ -117,6 +121,11 @@ extension Context {
             guard addSyntax(const: const, syntax: s, priority: priority) else { return nil }
         }
         return const
+    }
+    
+    @discardableResult
+    public func declare(_ constant : String, syntax : String..., priority : Float?) -> Const {
+        return declare(constant, syntax: syntax, priority: ConcreteSyntax.Priority.from(priority, default: .Atomic))!
     }
     
     public func assume(_ prop : Term, prover : ContextProver = Prover.fail) -> AxiomID? {
@@ -165,7 +174,7 @@ extension Context {
         let context = Context(kc)
         
         func add_syntax(const : Const, syntax : String, priority : Float? = nil) {
-            guard context.addSyntax(const: const, syntax: syntax, priority: ConcreteSyntax.Priority.from(priority, default: .Atomic)) else { fatalError() }
+            guard context.addSyntax(const: const, syntax: syntax, priority: priority) else { fatalError() }
         }
         
         add_syntax(const: Const.c_Prop, syntax: "ℙ")
@@ -178,4 +187,5 @@ extension Context {
         
         return context
     }
+
 }

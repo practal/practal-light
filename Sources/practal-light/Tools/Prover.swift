@@ -39,6 +39,20 @@ fileprivate struct ProveByAxioms : ContextProver {
     }
 }
 
+fileprivate struct DebugProver : ContextProver {
+    let prover : ContextProver
+    func prove(_ context: Context, _ prop : Prop) -> Theorem? {
+        print("proof obligation: \(prop)")
+        if let th = prover.prove(context, prop) {
+            print("proved successfully")
+            return th
+        } else {
+            print("could not prove")
+            return nil
+        }
+    }
+}
+
 public struct Prover {
     
     public static let fail = seq()
@@ -51,6 +65,10 @@ public struct Prover {
     
     public static func from(_ prover : @escaping KernelContext.Prover) -> ContextProver {
         return KernelProver(prover: prover)
+    }
+    
+    public static func debug(_ prover : ContextProver) -> ContextProver {
+        return DebugProver(prover: prover)
     }
 
 }

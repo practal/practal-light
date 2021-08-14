@@ -37,7 +37,7 @@ public struct Const : Hashable, CustomStringConvertible {
         return d
     }
     
-    private static func mkC(_ name : String) -> Const {
+    static func mkC(_ name : String) -> Const {
         return Const("Practal.\(name)")!
     }
     

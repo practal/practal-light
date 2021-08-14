@@ -280,23 +280,6 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         return Theorem(kc_uuid: uuid, prop: prop)
     }
     
-    public func andIntro(_ left : Theorem, _ right : Theorem) -> Theorem? {
-        guard isValid(left), isValid(right) else { return nil }
-        return mk_thm(.mk_and(left.prop, right.prop))
-    }
-    
-    public func andElim1(_ thm : Theorem) -> Theorem? {
-        guard isValid(thm) else { return nil }
-        guard let (op, left, _) = Term.dest_binary(thm.prop), op == .c_and else { return nil }
-        return mk_thm(left)
-    }
-    
-    public func andElim2(_ thm : Theorem) -> Theorem? {
-        guard isValid(thm) else { return nil }
-        guard let (op, _, right) = Term.dest_binary(thm.prop), op == .c_and else { return nil }
-        return mk_thm(right)
-    }
-    
     public func modusPonens(_ hyp : Theorem, _ imp : Theorem) -> Theorem? {
         guard isValid(hyp), isValid(imp) else { return nil }
         guard let (op, left, right) = Term.dest_binary(imp.prop), op == .c_imp else { return nil }
@@ -308,62 +291,18 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         guard isValid(thm) else { return nil }
         return mk_thm(.mk_all(x, thm.prop))
     }
-    
-    public func allElim(_ x : Term, _ thm : Theorem) -> Theorem? {
-        guard isValid(thm) else { return nil }
-        guard let (y, b) = Term.dest_all(thm.prop) else { return nil }
-        let subst = [y : TermWithHoles([], x)]
-        guard let tmSubst = TmSubstitution(self, wellformed: subst) else { return nil }
-        guard let tm = tmOf(b) else { return nil }
-        guard let prop = tmSubst.apply(tm)?.term() else { return nil }
-        return mk_thm(prop)
-    }
-    
-    public func exIntro(vars : [Var], _ subst : Substitution, prop : Term, _ thm : Theorem) -> Theorem? {
-        let varsSet = Set(vars)
-        guard varsSet.count == vars.count, varsSet == Set(subst.keys), isValid(thm) else { return nil }
-        guard let subst = TmSubstitution(self, wellformed: subst) else { return nil }
-        guard let p = Tm.fromWellformedTerm(self, term: prop) else { return nil }
-        guard let arities = p.freeVarsWithArity() else { return nil }
-        for v in vars {
-            if let a = arities[v] {
-                guard a == 0 else { return nil }
-            }
-        }
-        guard let sprop = subst.apply(p) else { return nil }
-        guard tmOf(thm.prop) == sprop else { return nil }
-        var prop = prop
-        for x in vars.reversed() {
-            prop = .mk_ex(x, prop)
-        }
-        return mk_thm(prop)
-    }
 
     public static func root() -> KernelContext {
         var kc = KernelContext(parent: nil, extensions: [], axioms: [], constants: [:])
         
         func introduce(_ const : Const, binders : [Var] = [], params : Term...) {
             kc = kc.declare(head: .init(const: const, binders: binders, params: params)!)!
-            kc = kc.seal(const: const)!
         }
         func v(_ name : String) -> Var {
             return Var(name)!
         }
         func tv(_ name : String, _ params : Term...) -> Term {
             return .variable(Var(name)!, params: params)
-        }
-                
-        func axiom(_ prop : Term) {
-            print("--- axiom: \(prop)")
-            kc = kc.assume(prop) { kc, prop in
-                print("proof obligation: \(prop)")
-                guard let proof = Matching(kc: kc).proveByAxiom(term: prop) else {
-                    print("proof failed")
-                    return nil
-                }
-                print("found proof")
-                return proof.thm
-            }!
         }
         
         introduce(.c_Prop)
@@ -379,16 +318,6 @@ public struct KernelContext : Hashable, CustomStringConvertible {
             return Theorem(kc_uuid: kc.uuid, prop: prop)
         }!
         
-        axiom(.mk_in_Prop(.mk_eq(tv("x"), tv("y"))))
-        axiom(.mk_in_Prop(.mk_and(tv("p"), tv("q"))))
-        axiom(.mk_in_Prop(.mk_imp(tv("p"), tv("q"))))
-        axiom(.mk_in_Prop(.mk_ex(v("x"), tv("P", tv("x")))))
-        axiom(.mk_in_Prop(.mk_all(v("x"), tv("P", tv("x")))))
-                
-        axiom(.mk_eq(tv("x"), tv("x")))
-        axiom(.mk_imp(.mk_eq(tv("x"), tv("y")), .mk_eq(tv("y"), tv("x"))))
-        axiom(.mk_imp(.mk_and(.mk_eq(tv("x"), tv("y")), .mk_eq(tv("y"), tv("z"))), .mk_eq(tv("x"), tv("z"))))
-
         return kc
     }
     
