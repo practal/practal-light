@@ -182,8 +182,6 @@ public extension Term {
         return .constant(op, binders: [], params: [])
     }
     
-    static let c_true = mk_nullary(.c_true)
-
     static let c_Prop = mk_nullary(.c_Prop)
     
     static func mk_eq(_ left : Term, _ right : Term) -> Term {
@@ -198,9 +196,9 @@ public extension Term {
         return mk_binary(Const.c_in, left, right)
     }
 
-    static func mk_ands(_ terms : [Term]) -> Term {
+    static func mk_ands1(_ terms : [Term]) -> Term {
         switch terms.count {
-        case 0: return c_true
+        case 0: fatalError()
         case 1: return terms.first!
         default:
             var ands = terms.first!
@@ -255,11 +253,11 @@ public extension Term {
     }
     
     static func mk_prop(hyps: [Term] = [], _ concls: [Term]) -> Term {
-        let Concl = Term.mk_ands(concls)
+        let Concl = Term.mk_ands1(concls)
         if hyps.isEmpty {
             return Concl
         } else {
-            let Hyp = Term.mk_ands(hyps)
+            let Hyp = Term.mk_ands1(hyps)
             return Term.mk_imp(Hyp, Concl)
         }
     }

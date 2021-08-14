@@ -170,7 +170,6 @@ extension Context {
         
         add_syntax(const: Const.c_Prop, syntax: "ℙ")
         add_syntax(const: Const.c_eq, syntax: "x = y", priority: ConcreteSyntax.REL_PRIO)
-        add_syntax(const: .c_true, syntax: "⊤")
         add_syntax(const: .c_in, syntax: "x : T", priority: ConcreteSyntax.REL_PRIO)
         add_syntax(const: .c_and, syntax: "`p ∧ q", priority: ConcreteSyntax.LOGIC_PRIO + ConcreteSyntax.AND_RPRIO)
         add_syntax(const: .c_imp, syntax: "p ⟶ `q", priority: ConcreteSyntax.LOGIC_PRIO + ConcreteSyntax.IMP_RPRIO)

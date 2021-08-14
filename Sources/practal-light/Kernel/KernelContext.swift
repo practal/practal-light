@@ -366,7 +366,6 @@ public struct KernelContext : Hashable, CustomStringConvertible {
             }!
         }
         
-        introduce(.c_true)
         introduce(.c_Prop)
         introduce(.c_eq, params: tv("x"), tv("y"))
         introduce(.c_in, params: tv("x"), tv("T"))
@@ -380,15 +379,12 @@ public struct KernelContext : Hashable, CustomStringConvertible {
             return Theorem(kc_uuid: kc.uuid, prop: prop)
         }!
         
-        axiom(.mk_in_Prop(.c_true))
         axiom(.mk_in_Prop(.mk_eq(tv("x"), tv("y"))))
         axiom(.mk_in_Prop(.mk_and(tv("p"), tv("q"))))
         axiom(.mk_in_Prop(.mk_imp(tv("p"), tv("q"))))
         axiom(.mk_in_Prop(.mk_ex(v("x"), tv("P", tv("x")))))
         axiom(.mk_in_Prop(.mk_all(v("x"), tv("P", tv("x")))))
-        
-        axiom(Term.c_true)
-        
+                
         axiom(.mk_eq(tv("x"), tv("x")))
         axiom(.mk_imp(.mk_eq(tv("x"), tv("y")), .mk_eq(tv("y"), tv("x"))))
         axiom(.mk_imp(.mk_and(.mk_eq(tv("x"), tv("y")), .mk_eq(tv("y"), tv("z"))), .mk_eq(tv("x"), tv("z"))))
