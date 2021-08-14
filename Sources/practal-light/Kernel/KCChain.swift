@@ -23,7 +23,6 @@ public struct KCChain {
     public mutating func append(_ context : KernelContext) -> Bool {
         if let last = _contexts.last {
             guard context.parent == last.uuid else {
-                print("could not append: last = \(last.uuid), parent = \(context.parent)")
                 return false
                 
             }

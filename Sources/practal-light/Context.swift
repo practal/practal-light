@@ -124,7 +124,7 @@ extension Context {
     }
     
     @discardableResult
-    public func declare(_ constant : String, syntax : String..., priority : Float?) -> Const {
+    public func declare(_ constant : String, syntax : String..., priority : Float? = nil) -> Const {
         return declare(constant, syntax: syntax, priority: ConcreteSyntax.Priority.from(priority, default: .Atomic))!
     }
     
@@ -163,6 +163,14 @@ extension Context {
         guard let axiom = define(const: const, hyps: [], body: body) else { return nil }
         guard seal(const: const) else { return nil }
         return (const, axiom)
+    }
+    
+    public func def(_ constant : String, _ definition : String, syntax : String..., priority : Float? = nil)  {
+        guard def(constant, definition, syntax: syntax, priority: ConcreteSyntax.Priority.from(priority, default: .Atomic)) != nil else { fatalError() }
+    }
+    
+    public func axiom(_ prop : String, prover : ContextProver = Prover.fail) {
+        guard assume(prop, prover: Prover.seq(prover, Prover.byAxioms)) != nil else { fatalError() }
     }
 
 }

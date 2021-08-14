@@ -145,7 +145,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
             let compatible = Term.mk_prop(hyps: d.hyps + hyps, Term.mk_eq(d.body, body))
             props.append(compatible)
         }
-        guard prove(prover, .mk_prop(props)) else { return nil }
+        guard prove(prover, props) else { return nil }
         let ax : Prop = .mk_prop(hyps: hyps, Term.mk_eq(def.head.term, body))
         def.definitions.append(DefCase(hyps: hyps, body: body))
         return extend([.define(const: const, hyps: hyps, body: body)], addAxioms: [ax], mergeConstants: [const: def])
@@ -235,7 +235,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
                     }
                 case let .define(const: const, hyps: hyps, body: body):
                     guard let head = constants[const]?.head, head.binders.count == 0  else { return nil }
-                    let d = Prop.mk_prop(hyps: hyps, [Term.mk_eq(head.term, body)])
+                    let d = Prop.mk_prop(hyps: hyps, Term.mk_eq(head.term, body))
                     let vars = head.params.map { p in p.unappliedVar! }
                     current = Term.mk_imp(Term.mk_all(vars, d), current)
                 case let .seal(const: const):

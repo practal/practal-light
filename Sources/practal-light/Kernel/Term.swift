@@ -252,7 +252,8 @@ public extension Term {
         }
     }
     
-    static func mk_prop(hyps: [Term] = [], _ concls: [Term]) -> Term {
+    static func mk_prop(hyps: [Term] = [], _ concls: [Term]) -> Term? {
+        if concls.isEmpty { return nil }
         let Concl = Term.mk_ands1(concls)
         if hyps.isEmpty {
             return Concl
@@ -263,6 +264,6 @@ public extension Term {
     }
 
     static func mk_prop(hyps: [Term] = [], _ concl: Term) -> Term {
-        return mk_prop(hyps: hyps, [concl])
+        return mk_prop(hyps: hyps, [concl])!
     }
 }

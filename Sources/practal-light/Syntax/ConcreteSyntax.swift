@@ -33,10 +33,11 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
     //public static let ARITH_PRIO : Float = 50
     public static let APP_PRIO : Float = 60
     
-    public static let IMP_RPRIO : Float = 0.1
-    public static let OR_RPRIO : Float = 0.2
-    public static let AND_RPRIO : Float = 0.3
-    public static let NOT_RPRIO : Float = 0.4
+    public static let EQUIV_RPRIO : Float = 0.1
+    public static let IMP_RPRIO : Float = 0.2
+    public static let OR_RPRIO : Float = 0.3
+    public static let AND_RPRIO : Float = 0.4
+    public static let NOT_RPRIO : Float = 0.5
     
     public static let UNION_RPRIO : Float = 0.1
     public static let FUN_RPRIO : Float = 0.2

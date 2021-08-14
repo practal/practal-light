@@ -370,8 +370,8 @@
 
         }
         
-        func testMinimalLogic() {
-            let context = Logics.minimalLogic()
+        func testLogics() {
+            let context = Logics.classicalLogic()
             print(context.kernel.description)
             
             func show(_ expr : String) {
@@ -384,8 +384,8 @@
             show("x = ℙ")
             show("t")
             show("t : ℙ")
-            show("a ∧ t ∧ x")
-            show("r ∧ d ⟶ a ∧ t ∧ x ⟶ i ∧ j")
+            show("a ∧ ⊥ ∧ x")
+            show("r ∧ d ⟶ a ∧ ⊥ ∧ x ⟶ i ∧ j")
             show("∀ x. ∃ y. x = y")
         }
         
