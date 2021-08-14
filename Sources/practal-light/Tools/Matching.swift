@@ -110,7 +110,7 @@ public struct Matching {
         while !tasks.isEmpty {
             let task = tasks.removeLast()
             guard solveTask(task) else {
-                print("could not solve task!")
+                //print("could not solve task!")
                 return nil
             }
         }

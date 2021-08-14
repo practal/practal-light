@@ -8,6 +8,7 @@
 import Foundation
 
 public struct Logics {
+    private typealias S = ConcreteSyntax
     
     public static let c_or = Const.mkC("or")
     public static let c_true = Const.mkC("true")
@@ -15,12 +16,14 @@ public struct Logics {
 
     public static let c_false = Const.mkC("false")
     public static let c_not = Const.mkC("not")
+    
+    public static let c_choose = Const.mkC("choose")
 
     public static func minimalLogic() -> Context {
         let context = Context.root()
         print(context.kernel.description)
         
-        context.declare("(\(c_or). p q)", syntax: "`p ∨ q", priority: ConcreteSyntax.LOGIC_PRIO + ConcreteSyntax.OR_RPRIO)
+        context.declare("(\(c_or). p q)", syntax: "`p ∨ q", priority: S.LOGIC_PRIO + S.OR_RPRIO)
 
         context.axiom("(x = y) : ℙ")
         context.axiom("(p ∧ q) : ℙ")
@@ -47,7 +50,7 @@ public struct Logics {
         context.axiom("P[t] ⟶ (∃ x. P[x])")
         
         context.def("(\(c_true).)", "∀ x. x = x", syntax: "⊤")
-        context.def("(\(c_equiv). p q)", "(p ⟶ q) ∧ (q ⟶ p)", syntax: "p ⟷ q", priority: ConcreteSyntax.LOGIC_PRIO + ConcreteSyntax.EQUIV_RPRIO)
+        context.def("(\(c_equiv). p q)", "(p ⟶ q) ∧ (q ⟶ p)", syntax: "p ⟷ q", priority: S.LOGIC_PRIO + S.EQUIV_RPRIO)
 
         return context
     }
@@ -57,7 +60,7 @@ public struct Logics {
         
         context.declare("(\(c_false).)", syntax: "⊥")
         
-        context.def("(\(c_not). p)", "p ⟶ ⊥", syntax: "¬ `p", priority: ConcreteSyntax.LOGIC_PRIO + ConcreteSyntax.NOT_RPRIO)
+        context.def("(\(c_not). p)", "p ⟶ ⊥", syntax: "¬ `p", priority: S.LOGIC_PRIO + S.NOT_RPRIO)
         
         context.axiom("p : ℙ ⟶ ⊥ ⟶ p")
         
@@ -68,6 +71,9 @@ public struct Logics {
         let context = intuitionisticLogic()
         
         context.axiom("¬ ¬ p ⟶ p")
+        
+        context.declare("(\(c_choose) x. P[x])", syntax: "ε x. `P", priority: S.BINDER_PRIO)
+        context.axiom("(∃ x. P[x]) ⟶ P[ε x. P[x]]")
         
         return context
     }
