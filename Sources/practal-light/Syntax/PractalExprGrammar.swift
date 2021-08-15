@@ -223,49 +223,6 @@ public class PractalExprGrammar : TextGrammar {
         }
         
     }
-
-    func constConcreteRuleBody(abstractSyntax : AbstractSyntax, concreteSyntax : ConcreteSyntax, E : N, E_raised : N) -> RuleBody {
-        var elems : [RuleBody] = []
-        var i = 0
-        var first : Bool = true
-        for fragment in concreteSyntax.fragments {
-            switch fragment {
-            case .Space:
-                if !first {
-                    elems.append(_OptSpace[i])
-                    first = true
-                }
-            case .Text(let syntax):
-                if !first {
-                    elems.append(_OptSpace[i])
-                }
-                first = false
-                elems.append(const(syntax))
-            case .Keyword(let keyword):
-                if !first {
-                    elems.append(_OptSpace[i])
-                }
-                first = false
-                let k = const(keyword)
-                add {
-                    prioritise(terminal: k, over: Var)
-                }
-                elems.append(k)
-            case let .Var(v, raised: raised):
-                if !first {
-                    elems.append(_OptSpace[i])
-                }
-                first = false
-                if abstractSyntax.binders.contains(v) {
-                    elems.append(Var[i])
-                } else {
-                    elems.append(raised ? E_raised[i] : E[i])
-                }
-            }
-            i += 1
-        }
-        return collectRuleBody(elems)
-    }
     
     func syntaxPatternRuleBody(syntaxPattern : SyntaxPattern, concreteSyntax : ConcreteSyntax, E : N, E_raised : N) -> RuleBody
     {

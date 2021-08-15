@@ -85,14 +85,14 @@
             XCTAssertEqual(eqAB, ConcreteSyntax(fragments: [.Var(v("A"), raised: true), .Space, .Text("="), .Space, .Var(v("B"), raised: true)], priority: .None))
         }
         
-        func testPretty() {
+        /*func testPretty() {
             let theory = Theory()
             theory.introduce("(eq. A B)", syntax: "A = B")
             let t = theory.parse("(u = (v = w))")
             print("pretty = \(theory.pretty(t))")
-        }
+        }*/
         
-        func testTheory() {
+        /*func testTheory() {
             let parser = PractalExprParser()
             func e(_ expr : String) -> Term {
                 let terms = parser.parse(expr: expr)
@@ -120,9 +120,9 @@
             XCTAssertEqual(theory.checkWellformedness(g), [v("x"): 0, v("P"): 1, v("u"): 0])
             let h = theory.parse("λ x : x. P[x]")
             XCTAssertEqual(theory.checkWellformedness(h), [v("x") : 0, v("P") : 1])
-        }
+        }*/
         
-        func testPracticalTypes() {
+        /*func testPracticalTypes() {
             let CONTROL_PRIO : Float = 0
             let BINDER_PRIO : Float = 10
             let LOGIC_PRIO : Float = 20
@@ -348,7 +348,7 @@
             axiom("⊤ ⟶ ⊤")
             axiom("(⊤ ⟶ ⊥) = ⊥")
             axiom("(⊤ ⟶ nil) = ⊥")
-        }
+        }*/
         
         func testContext() {
             let context = Context.root()
