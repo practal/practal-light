@@ -13,12 +13,7 @@ public struct Logics {
     public static let c_or = Const.mkC("or")
     public static let c_true = Const.mkC("true")
     public static let c_equiv = Const.mkC("equiv")
-
-    public static let c_false = Const.mkC("false")
-    public static let c_not = Const.mkC("not")
     
-    public static let c_choose = Const.mkC("choose")
-
     public static func minimalLogic() -> Context {
         let context = Context.root()
         print(context.kernel.description)
@@ -55,6 +50,9 @@ public struct Logics {
         return context
     }
         
+    public static let c_false = Const.mkC("false")
+    public static let c_not = Const.mkC("not")
+
     public static func intuitionisticLogic() -> Context {
         let context = minimalLogic()
         
@@ -67,19 +65,35 @@ public struct Logics {
         return context
     }
     
+    public static let c_choose = Const.mkC("choose")
+    public static let c_if = Const.mkC("if")
+
     public static func classicalLogic() -> Context {
         let context = intuitionisticLogic()
+        print(context.description)
         
         context.axiom("¬ ¬ p ⟶ p")
         
         context.declare("(\(c_choose) x. P[x])", syntax: "ε x. `P", priority: S.BINDER_PRIO)
         context.axiom("(∃ x. P[x]) ⟶ P[ε x. P[x]]")
         
+        context.def("(\(c_if). p A B)", "ε x. (p ⟶ x = A) ∧ (¬ p ⟶ x = B)", syntax: "if p then A else B", priority: S.CONTROL_PRIO)
+        
         return context
     }
     
+    public static let c_is_Type = Const.mkC("is-Type")
+    public static let c_Empty = Const.mkC("Empty")
+
     public static func practicalTypes() -> Context {
-        fatalError()
+        let context = classicalLogic()
+        
+        context.declare("(\(c_Empty).)", syntax: "∅")
+        context.axiom("¬(x : ∅)")
+        
+        context.def("(\(c_is_Type). T)", "T = ∅ ∨ (∃ x. x : T)", syntax: "T : 𝕋")
+        
+        return context
     }
     
 }

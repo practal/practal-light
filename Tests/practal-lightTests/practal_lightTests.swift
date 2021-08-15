@@ -371,7 +371,7 @@
         }
         
         func testLogics() {
-            let context = Logics.classicalLogic()
+            let context = Logics.practicalTypes()
             print(context.kernel.description)
             
             func show(_ expr : String) {

@@ -197,3 +197,11 @@ extension Context {
     }
 
 }
+
+extension Context : CustomStringConvertible {
+    
+    public var description: String {
+        return kernel.description
+    }
+    
+}

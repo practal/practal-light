@@ -109,6 +109,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
     }
     
     public func assume(_ term : Term, prover : Prover) -> KernelContext? {
+        print("assume \(term)")
         guard isWellformed(term) else { return nil }
         guard prove(prover, Term.mk_in_Prop(term)) else { return nil }
         return extend([.assume(term)], addAxioms: [term])
