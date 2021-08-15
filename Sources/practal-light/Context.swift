@@ -11,18 +11,32 @@ public typealias AxiomID = Int
 
 public final class Context {
         
+    private let parent : Context?
     private var kcc : KCChain
     private var syntax : Syntax
     private var dirty_syntax : Bool
     private var _parser : PractalExprParser
     private var _printer : PrettyPrinter
+    private var _theorems : [String : Theorem]
 
     fileprivate init(_ kc : KernelContext) {
+        parent = nil
         kcc = KCChain(kc)
         syntax = []
-        dirty_syntax = true
+        dirty_syntax = false
         _parser = PractalExprParser(syntax: syntax)
         _printer = PrettyPrinter(patterns: syntax)
+        _theorems = [:]
+    }
+    
+    fileprivate init(_ parent : Context) {
+        self.parent = parent
+        kcc = KCChain(parent.kernel)
+        syntax = parent.syntax
+        dirty_syntax = false
+        _parser = PractalExprParser(syntax: syntax)
+        _printer = PrettyPrinter(patterns: syntax)
+        _theorems = parent._theorems
     }
     
     private func refresh() {
@@ -73,6 +87,48 @@ public final class Context {
     public func extend(_ op: (Context) -> KernelContext?) -> Bool {
         guard let kc = op(self) else { return false }
         return kcc.append(kc)
+    }
+    
+    public func lift(_ thm : Theorem) -> Theorem? {
+        guard let kcIndex = kcc.find(thm.kc_uuid) else { return nil }
+        return KernelContext.lift(thm, in: kcc, from: kcIndex, to: kcc.count - 1)!
+    }
+    
+    public func lift(_ thm : Theorem, from : Context) -> Theorem? {
+        let th1 = from.liftToTop(thm)!
+        let th2 = lift(th1)!
+        return th2
+    }
+    
+    public func liftToTop(_ thm : Theorem) -> Theorem? {
+        guard let kcIndex = kcc.find(thm.kc_uuid) else { return nil }
+        return KernelContext.lift(thm, in: kcc, from: kcIndex, to: 0)!
+    }
+    
+    public subscript (_ thm_name : String) -> Theorem {
+        get {
+            let th = _theorems[thm_name]!
+            return lift(th)!
+        }
+        set {
+            guard kcc.current.uuid == newValue.kc_uuid else { fatalError() }
+            _theorems[thm_name] = newValue
+        }
+    }
+    
+    public subscript (_ thm_name : String, from: Context) -> Theorem {
+        get {
+            let th0 = from._theorems[thm_name]!
+            return lift(th0, from: from)!
+        }
+    }
+    
+    public func spawn() -> Context {
+        return Context(self)
+    }
+    
+    public var storedTheorems : [String : Theorem] {
+        return _theorems
     }
     
 }
@@ -171,6 +227,20 @@ extension Context {
     
     public func axiom(_ prop : String, prover : ContextProver = Prover.fail) {
         guard assume(prop, prover: Prover.seq(prover, Prover.byAxioms)) != nil else { fatalError() }
+    }
+    
+    public func trivial(_ prop : String) -> Theorem {
+        let prop = parse(prop)!
+        let prover = Prover.seq(Prover.byAxioms, Prover.byStoredTheorems)
+        return prover.prove(self, prop)!
+    }
+    
+    public func all(_ vars : String..., thm : Theorem) -> Theorem {
+        var thm = thm
+        for v in vars.reversed() {
+            thm = kernel.allIntro(Var(v)!, thm)!
+        }
+        return thm
     }
 
 }

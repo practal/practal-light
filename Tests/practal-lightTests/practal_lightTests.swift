@@ -371,7 +371,7 @@
         }
         
         func testLogics() {
-            let context = Logics.practicalTypes()
+            let context = Logics.minimalLogic()//Logics.practicalTypes()
             print(context.kernel.description)
             
             func show(_ expr : String) {
@@ -380,13 +380,13 @@
                 print("pretty: \(context.pretty(t)), raw: \(t)")
             }
             
-            show("ℙ")
+            /*show("ℙ")
             show("x = ℙ")
             show("t")
             show("t : ℙ")
             show("a ∧ ⊥ ∧ x")
             show("r ∧ d ⟶ a ∧ ⊥ ∧ x ⟶ i ∧ j")
-            show("∀ x. ∃ y. x = y")
+            show("∀ x. ∃ y. x = y")*/
         }
         
         func testKernelContext() {

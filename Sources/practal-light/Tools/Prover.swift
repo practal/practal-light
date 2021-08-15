@@ -39,6 +39,21 @@ fileprivate struct ProveByAxioms : ContextProver {
     }
 }
 
+fileprivate struct ProveByStoredTheorems : ContextProver {
+    func prove(_ context: Context, _ prop: Prop) -> Theorem? {
+        let kc = context.kernel
+        let matching = Matching(kc: kc)
+        guard let prop = kc.tmOf(prop) else { return nil }
+        for (_, thm) in context.storedTheorems {
+            let stored = kc.tmOf(thm.prop)!
+            guard let subst = matching.match(pattern: stored, instance: prop) else { continue }
+            guard let th = kc.substitute(subst, in: context.lift(thm)!) else { continue }
+            return th
+        }
+        return nil
+    }
+}
+
 fileprivate struct DebugProver : ContextProver {
     let prover : ContextProver
     func prove(_ context: Context, _ prop : Prop) -> Theorem? {
@@ -58,6 +73,8 @@ public struct Prover {
     public static let fail = seq()
     
     public static let byAxioms : ContextProver = ProveByAxioms()
+    
+    public static let byStoredTheorems : ContextProver = ProveByStoredTheorems()
     
     public static func seq(_ provers : ContextProver...) -> ContextProver {
         return ContextProvers(provers: provers)

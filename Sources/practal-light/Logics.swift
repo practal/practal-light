@@ -31,7 +31,7 @@ public struct Logics {
         context.axiom("x = x")
         context.axiom("x = y ⟶ y = x")
         context.axiom("x = y ⟶ y = z ⟶ x = z")
-        context.axiom("x = y ⟶ A[x] = A[y]")
+        context.axiom("x = y ⟶ P[x] ⟶ P[y]")
 
         context.axiom("p ∧ q ⟶ p")
         context.axiom("p ∧ q ⟶ q")
@@ -46,6 +46,11 @@ public struct Logics {
         
         context.def("(\(c_true).)", "∀ x. x = x", syntax: "⊤")
         context.def("(\(c_equiv). p q)", "(p ⟶ q) ∧ (q ⟶ p)", syntax: "p ⟷ q", priority: S.LOGIC_PRIO + S.EQUIV_RPRIO)
+        
+        //context.trivial("(⊤ = ∀ x. x = x) ⟶  ")
+        
+        let th = context.all("x", thm: context.trivial("x = x"))
+        print("th = \(th)")
 
         return context
     }

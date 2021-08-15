@@ -47,6 +47,10 @@ public struct KCChain {
         return i >= 0 && i < contexts.count
     }
     
+    public func find(_ kcid : UUID) -> Int? {
+        return contexts.lastIndex { kc in kc.uuid == kcid }
+    }
+    
     public subscript(_ index : Int) -> KernelContext {
         return contexts[index]
     }
