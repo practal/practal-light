@@ -42,6 +42,11 @@ public struct Matching {
         
         var tasks = [Task(level: 0, pattern: pattern, instance: instance)]
         
+        func addTask(_ task : Task) {
+            print("adding task: \(task)")
+            tasks.append(task)
+        }
+        
         func addAndApply(_ v : Var, _ tmWithHoles : TmWithHoles) -> Bool {
             let subst = TmSubstitution(free: [v : tmWithHoles])
             let newTasks = tasks.compactMap { task in task.apply(subst) }
@@ -55,8 +60,7 @@ public struct Matching {
         func solve(level : Int, params1 : [Tm], params2 : [Tm]) -> Bool {
             guard params1.count == params2.count else { return false }
             for (i, param) in params1.enumerated() {
-                let task = Task(level: level, pattern: param, instance: params2[i])
-                tasks.append(task)
+                addTask(Task(level: level, pattern: param, instance: params2[i]))
             }
             return true
         }
@@ -94,15 +98,13 @@ public struct Matching {
                 let twh = TmWithHoles.constant(holes: params1.count, head: head) { v, a in frees.addFresh(v, arity: a) }
                 guard let lhs = twh.fillHoles(params1) else { return false }
                 guard addAndApply(v, twh) else { return false }
-                let task = Task(level: task.level, pattern: lhs, instance: task.instance)
-                tasks.append(task)
+                addTask(Task(level: task.level, pattern: lhs, instance: task.instance))
                 return true
             case let (.free(v1, params: params1), .free(v2, params: params2)):
                 let twh = TmWithHoles.variable(holes: params1.count, var: v2, numargs: params2.count) { v, a in frees.addFresh(v, arity: a) }
                 guard let lhs = twh.fillHoles(params1) else { return false }
                 guard addAndApply(v1, twh) else { return false }
-                let task = Task(level: task.level, pattern: lhs, instance: task.instance)
-                tasks.append(task)
+                addTask(Task(level: task.level, pattern: lhs, instance: task.instance))
                 return true
             }
         }

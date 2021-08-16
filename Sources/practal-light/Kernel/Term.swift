@@ -174,6 +174,11 @@ public extension Term {
         }
     }
     
+    static func dest_binary(_ term : Term, op: Const) -> (left: Term, right: Term)? {
+        guard let (c, l, r) = dest_binary(term), op == c else { return nil }
+        return (left: l, right: r)
+    }
+    
     static func mk_unary(_ op : Const, _ arg : Term) -> Term {
         return .constant(op, binders: [], params: [arg])
     }

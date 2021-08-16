@@ -11,7 +11,6 @@ public typealias AxiomID = Int
 
 public final class Context {
         
-    private let parent : Context?
     private var kcc : KCChain
     private var syntax : Syntax
     private var dirty_syntax : Bool
@@ -20,7 +19,6 @@ public final class Context {
     private var _theorems : [String : Theorem]
 
     fileprivate init(_ kc : KernelContext) {
-        parent = nil
         kcc = KCChain(kc)
         syntax = []
         dirty_syntax = false
@@ -30,12 +28,11 @@ public final class Context {
     }
     
     fileprivate init(_ parent : Context) {
-        self.parent = parent
         kcc = KCChain(parent.kernel)
         syntax = parent.syntax
-        dirty_syntax = false
-        _parser = PractalExprParser(syntax: syntax)
-        _printer = PrettyPrinter(patterns: syntax)
+        dirty_syntax = parent.dirty_syntax
+        _parser = parent._parser
+        _printer = parent._printer
         _theorems = parent._theorems
     }
     
@@ -111,9 +108,13 @@ public final class Context {
             return lift(th)!
         }
         set {
-            guard kcc.current.uuid == newValue.kc_uuid else { fatalError() }
-            _theorems[thm_name] = newValue
+            store(thm_name, newValue)
         }
+    }
+    
+    public func store(_ thm_name : String = UUID().description, _ thm : Theorem) {
+        let thm = lift(thm)!
+        _theorems[thm_name] = thm
     }
     
     public subscript (_ thm_name : String, from: Context) -> Theorem {
@@ -227,20 +228,6 @@ extension Context {
     
     public func axiom(_ prop : String, prover : ContextProver = Prover.fail) {
         guard assume(prop, prover: Prover.seq(prover, Prover.byAxioms)) != nil else { fatalError() }
-    }
-    
-    public func trivial(_ prop : String) -> Theorem {
-        let prop = parse(prop)!
-        let prover = Prover.seq(Prover.byAxioms, Prover.byStoredTheorems)
-        return prover.prove(self, prop)!
-    }
-    
-    public func all(_ vars : String..., thm : Theorem) -> Theorem {
-        var thm = thm
-        for v in vars.reversed() {
-            thm = kernel.allIntro(Var(v)!, thm)!
-        }
-        return thm
     }
 
 }

@@ -370,6 +370,13 @@
 
         }
         
+        func testMatching() {
+            let context = Context.root()
+            let ax = context.parse("x = y ⟶ P[x] ⟶ P[y]")!
+            print("-----------------")
+            XCTAssertNotNil(context.match(pattern: ax, instance: ax))
+        }
+        
         func testLogics() {
             let context = Logics.minimalLogic()//Logics.practicalTypes()
             print(context.kernel.description)

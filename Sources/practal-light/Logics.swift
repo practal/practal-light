@@ -49,8 +49,14 @@ public struct Logics {
         
         //context.trivial("(⊤ = ∀ x. x = x) ⟶  ")
         
-        let th = context.all("x", thm: context.trivial("x = x"))
-        print("th = \(th)")
+        /*let true_def = context.trivial("⊤ = (∀ x. x = x)")!
+        let true_sym = context.symmetric(true_def)!
+        print("true_sym = \(true_sym)")
+        let eq_subst = context.trivial("x = y ⟶ P[x] ⟶ P[y]")!
+        let all = context.all("x", thm: context.trivial("x = x")!)!
+        let true_is_true = context.apply(true_sym, all, to: eq_subst)!
+        
+        print("th = \(true_is_true)")*/
 
         return context
     }
