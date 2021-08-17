@@ -372,17 +372,20 @@
         
         func testMatching() {
             let context = Context.root()
-            let ax = context.parse("x = y ⟶ P[x] ⟶ P[y]")!
-            print("-----------------")
-            XCTAssertEqual(context.match(pattern: ax, instance: ax).count, 1)
-            let ax2 = context.parse("x = y ⟶ P[x]")!
-            print("-----------------")
-            let matches = context.match(pattern: ax2, instance: ax2)
-            XCTAssertEqual(matches.count, 2)
-            print("number of matches: \(matches.count)")
-            for m in matches {
-                print("- \(m)")
+            func match(_ s : String) -> Int {
+                print("~~~~~~~~~~~~~~~~~")
+                let ax = context.parse(s)!
+                let ms = context.match(pattern: ax, instance: ax)
+                print("-----------------")
+                print("number of matches: \(ms.count)")
+                for m in ms {
+                    print("- \(m)")
+                }
+                return ms.count
             }
+            XCTAssertEqual(match("x = y ⟶ P[x] ⟶ P[y]"), 1)
+            XCTAssertEqual(match("x = y ⟶ P[x]"), 2)
+            XCTAssertEqual(match("P[x]"), 3)
         }
         
         func testLogics() {
