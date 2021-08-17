@@ -46,21 +46,24 @@ public struct Logics {
         
         context.def("(\(c_true).)", "∀ x. x = x", syntax: "⊤")
         context.def("(\(c_equiv). p q)", "(p ⟶ q) ∧ (q ⟶ p)", syntax: "p ⟷ q", priority: S.LOGIC_PRIO + S.EQUIV_RPRIO)
+                
+        prove_true_is_true(context: context)
         
-        //context.trivial("(⊤ = ∀ x. x = x) ⟶  ")
-        
-        /*let true_def = context.trivial("⊤ = (∀ x. x = x)")!
-        let true_sym = context.symmetric(true_def)!
-        print("true_sym = \(true_sym)")
-        let eq_subst = context.trivial("x = y ⟶ P[x] ⟶ P[y]")!
-        let all = context.all("x", thm: context.trivial("x = x")!)!
-        let true_is_true = context.apply(true_sym, all, to: eq_subst)!
-        
-        print("th = \(true_is_true)")*/
-
         return context
     }
-        
+    
+    private static func prove_true_is_true(context : Context) {
+        let true_def = context.trivial("⊤ = (∀ x. x = x)")!
+        let true_sym = context.symmetric(true_def)!
+        let eq_subst = context.trivial("x = y ⟶ P[x] ⟶ P[y]")!
+        let all = context.all("x", thm: context.trivial("x = x")!)!
+        let true_is_true = context.apply(true_sym, all, goal: "⊤", to: eq_subst)!
+        context.store(thm: true_is_true)
+        let all_is_in_Prop = context.trivial("(∀ x. x = x) : ℙ")!
+        let true_is_in_Prop = context.apply(true_sym, all_is_in_Prop, goal: "⊤ : ℙ", to: eq_subst)!
+        context.store(thm: true_is_in_Prop)
+    }
+            
     public static let c_false = Const.mkC("false")
     public static let c_not = Const.mkC("not")
 

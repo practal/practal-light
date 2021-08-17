@@ -36,7 +36,7 @@ public struct Matching {
         
         mutating func substitute(_ v : Var, _ tmWithHoles : TmWithHoles) -> Bool {
             let subst = TmSubstitution(free: [v : tmWithHoles])
-            print("substitute \(v) ==> \(tmWithHoles)")
+            //print("substitute \(v) ==> \(tmWithHoles)")
             let newTasks = tasks.compactMap { task in task.apply(subst) }
             guard newTasks.count == tasks.count else { return false }
             guard result.compose(subst) else { return false }
@@ -46,7 +46,7 @@ public struct Matching {
         }
         
         mutating func addTask(_ task : Task) {
-            print("adding task: \(task)")
+            //print("adding task: \(task)")
             tasks.append(task)
         }
         
@@ -59,18 +59,29 @@ public struct Matching {
         
     public let kc : KernelContext
     
-    public func match(pattern : Tm, instance : Tm, max_matches : Int, frees : inout FreeVars) -> [TmSubstitution] {
+    public func match(patterns : [Tm], instances : [Tm], max_matches : Int, frees : inout FreeVars) -> [TmSubstitution] {
+        guard patterns.count == instances.count else { fatalError() }
         
-        guard frees.add(pattern) else { return [] }
+        var _patternFreeVars = FreeVars()
         
-        guard let (instance, instanceRenaming) = frees.addFresh(instance) else { return [] }
+        for p in patterns {
+            guard frees.add(p) else { return [] }
+            _patternFreeVars.add(p)
+        }
         
-        let constantFreeVars = instance.freeVars()
+        let patternFreeVars = _patternFreeVars.vars
+        
+        guard let (instances, renaming) = frees.addFresh(instances) else { return [] }
+        
+        let constantFreeVars = renaming.codomain
         
         var nextJobs : [Job] = []
         var results : [TmSubstitution] = []
 
-        var job = Job(result: TmSubstitution(), tasks: [Task(level: 0, pattern: pattern, instance: instance)])
+        var job = Job(result: TmSubstitution(), tasks: [])
+        for (i, p) in patterns.enumerated() {
+            job.addTask(Task(level: 0, pattern: p, instance: instances[i]))
+        }
                 
         func trySubstitutions( _ v : Var, substs : [TmWithHoles]) -> Bool {
             var newJobs : [Job] = []
@@ -186,6 +197,8 @@ public struct Matching {
                 return trySubstitutions(v1, substs: twhs)
             }
         }
+                
+        let renamingReversed = renaming.reversed()
         
         jobLoop:
         repeat {
@@ -196,8 +209,8 @@ public struct Matching {
                     continue jobLoop
                 }
             }
-            job.result.restrict(pattern.freeVars())
-            job.result.compose(instanceRenaming.reversed())
+            job.result.restrict(patternFreeVars)
+            job.result.compose(renamingReversed)
             results.append(job.result)
             guard !nextJobs.isEmpty, results.count < max_matches else {
                 return results
@@ -206,9 +219,13 @@ public struct Matching {
         } while true
     }
     
-    public func match(pattern : Tm, instance : Tm, max_matches : Int = Int.max) -> [TmSubstitution] {
+    public func match(patterns : [Tm], instances : [Tm], max_matches : Int = Int.max) -> [TmSubstitution] {
         var frees = FreeVars()
-        return match(pattern: pattern, instance: instance, max_matches: max_matches, frees: &frees)
+        return match(patterns: patterns, instances: instances, max_matches: max_matches, frees: &frees)
+    }
+
+    public func match(pattern : Tm, instance : Tm, max_matches : Int = Int.max) -> [TmSubstitution] {
+        return match(patterns: [pattern], instances: [instance], max_matches: max_matches)
     }
         
     public func match1(pattern : Tm, instance : Tm) -> TmSubstitution? {

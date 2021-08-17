@@ -150,6 +150,14 @@ public struct TmVarRenaming {
             table[v] = newValue
         }
     }
+    
+    public var codomain : Set<Var> {
+        return Set(table.values)
+    }
+    
+    public var domain : Set<Var> {
+        return Set(table.keys)
+    }
         
 }
 

@@ -108,12 +108,13 @@ public final class Context {
             return lift(th)!
         }
         set {
-            store(thm_name, newValue)
+            store(thm_name, thm: newValue)
         }
     }
     
-    public func store(_ thm_name : String = UUID().description, _ thm : Theorem) {
+    public func store(_ thm_name : String = UUID().description, thm : Theorem) {
         let thm = lift(thm)!
+        print("Storing theorem: \(thm)")
         _theorems[thm_name] = thm
     }
     
