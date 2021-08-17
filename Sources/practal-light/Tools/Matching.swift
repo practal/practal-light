@@ -93,6 +93,38 @@ public struct Matching {
             return true
         }
         
+        func couldMatch(pattern  : Tm, constVar : Var) -> Bool {
+            switch pattern {
+            case let .free(v, params: _):
+                if constantFreeVars.contains(v) {
+                    return v == constVar
+                } else {
+                    return true
+                }
+            case .bound, .const: return false
+            }
+        }
+        
+        func couldMatch(pattern : Tm, const : Const) -> Bool {
+            switch pattern {
+            case let .free(v, params: _): return !constantFreeVars.contains(v)
+            case .bound: return false
+            case let .const(c, binders: _, params: _): return c == const
+            }
+        }
+        
+        func couldMatch(pattern : Tm, constBound index : Int) -> Bool {
+            switch pattern {
+            case .free: return true
+            case let .bound(i): return i == index
+            case .const: return false
+            }
+        }
+
+        func couldMatch(pattern : Tm, bound index : Int) -> Bool {
+            return pattern == .bound(index)
+        }
+
         func solveTask(_ task : Task) -> Bool {
             switch (task.pattern, task.instance) {
             case (.const, .free): return false
@@ -111,25 +143,47 @@ public struct Matching {
                 default: return false
                 }
             case let (.free(v, params: params1), .bound(index)) where index < task.level:
-                guard let k = (params1.firstIndex { (tm : Tm) -> Bool in
-                    tm == .bound(index)
-                }) else { return false }
-                // todo: we just use the first parameter position found, if there are more we might be missing a possible match
-                let twh = TmWithHoles.projection(holes: params1.count, k)
-                return job.substitute(v, twh)
+                job.addTask(task)
+                var twhs : [TmWithHoles] = []
+                for (i, p) in params1.enumerated() {
+                    if couldMatch(pattern: p, bound: index) {
+                        twhs.append(TmWithHoles.projection(holes: params1.count, i))
+                    }
+                }
+                return trySubstitutions(v, substs: twhs)
             case let (.free(v, params: params1), .bound(index)): // index >= task.level
-                // todo: we are just taking the simplest possibility here, projections might also be candidates, and we would miss them
-                let twh = TmWithHoles.constant(holes: params1.count, index - task.level)
-                return job.substitute(v, twh)
+                job.addTask(task)
+                var twhs : [TmWithHoles] = []
+                twhs.append(TmWithHoles.constant(holes: params1.count, index - task.level))
+                for (i, p) in params1.enumerated() {
+                    if couldMatch(pattern: p, constBound: index) {
+                        twhs.append(TmWithHoles.projection(holes: params1.count, i))
+                    }
+                }
+                return trySubstitutions(v, substs: twhs)
             case let (.free(v, params: params1), .const(c, _, params: _)):
                 guard let head = kc.constants[c]?.head else { return false }
+                job.addTask(task)
+                var twhs : [TmWithHoles] = []
                 let twh = TmWithHoles.constant(holes: params1.count, head: head) { v, a in frees.addFresh(v, arity: a) }
-                job.addTask(task)
-                return trySubstitutions(v, substs: [twh])
+                twhs.append(twh)
+                for (i, p) in params1.enumerated() {
+                    if couldMatch(pattern: p, const: c) {
+                        twhs.append(TmWithHoles.projection(holes: params1.count, i))
+                    }
+                }
+                return trySubstitutions(v, substs: twhs)
             case let (.free(v1, params: params1), .free(v2, params: params2)):
-                let twh = TmWithHoles.variable(holes: params1.count, var: v2, numargs: params2.count) { v, a in frees.addFresh(v, arity: a) }
                 job.addTask(task)
-                return trySubstitutions(v1, substs: [twh])
+                var twhs : [TmWithHoles] = []
+                let twh = TmWithHoles.variable(holes: params1.count, var: v2, numargs: params2.count) { v, a in frees.addFresh(v, arity: a) }
+                twhs.append(twh)
+                for (i, p) in params1.enumerated() {
+                    if couldMatch(pattern: p, constVar: v2) {
+                        twhs.append(TmWithHoles.projection(holes: params1.count, i))
+                    }
+                }
+                return trySubstitutions(v1, substs: twhs)
             }
         }
         
@@ -150,7 +204,6 @@ public struct Matching {
             }
             job = nextJobs.removeLast()
         } while true
-        fatalError("internal error")
     }
     
     public func match(pattern : Tm, instance : Tm) -> [TmSubstitution] {
