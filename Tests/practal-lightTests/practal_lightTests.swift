@@ -375,6 +375,14 @@
             let ax = context.parse("x = y ⟶ P[x] ⟶ P[y]")!
             print("-----------------")
             XCTAssertEqual(context.match(pattern: ax, instance: ax).count, 1)
+            let ax2 = context.parse("x = y ⟶ P[x]")!
+            print("-----------------")
+            let matches = context.match(pattern: ax2, instance: ax2)
+            XCTAssertEqual(matches.count, 2)
+            print("number of matches: \(matches.count)")
+            for m in matches {
+                print("- \(m)")
+            }
         }
         
         func testLogics() {
