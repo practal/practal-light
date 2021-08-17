@@ -372,10 +372,10 @@
         
         func testMatching() {
             let context = Context.root()
-            func match(_ s : String) -> Int {
+            func match(_ s : String, max_matches : Int = Int.max) -> Int {
                 print("~~~~~~~~~~~~~~~~~")
                 let ax = context.parse(s)!
-                let ms = context.match(pattern: ax, instance: ax)
+                let ms = context.match(pattern: ax, instance: ax, max_matches: max_matches)
                 print("-----------------")
                 print("number of matches: \(ms.count)")
                 for m in ms {
@@ -386,6 +386,9 @@
             XCTAssertEqual(match("x = y ⟶ P[x] ⟶ P[y]"), 1)
             XCTAssertEqual(match("x = y ⟶ P[x]"), 2)
             XCTAssertEqual(match("P[x]"), 3)
+            XCTAssertEqual(match("x = y ⟶ P[x] ⟶ P[y]", max_matches: 1), 1)
+            XCTAssertEqual(match("x = y ⟶ P[x]", max_matches: 1), 1)
+            XCTAssertEqual(match("P[x]", max_matches: 1), 1)
         }
         
         func testLogics() {

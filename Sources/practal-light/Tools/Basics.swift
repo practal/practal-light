@@ -25,12 +25,16 @@ extension Context {
         return thm
     }
     
-    public func match(pattern : Term, instance : Term) -> [TmSubstitution] {
+    public func match(pattern : Term, instance : Term, max_matches : Int = Int.max) -> [TmSubstitution] {
         let kc = kernel
         let mc = Matching(kc: kc)
         guard let pattern = kc.tmOf(pattern) else { return [] }
         guard let instance = kc.tmOf(instance) else { return [] }
-        return mc.match(pattern: pattern, instance: instance)
+        return mc.match(pattern: pattern, instance: instance, max_matches: max_matches)
+    }
+
+    public func match1(pattern : Term, instance : Term, max_matches : Int = Int.max) -> TmSubstitution? {
+        return match(pattern: pattern, instance: instance, max_matches: 1).first
     }
 
     public func apply(hyp: Theorem, to implication : Theorem) -> Theorem? {

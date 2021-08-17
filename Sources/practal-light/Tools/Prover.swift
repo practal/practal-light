@@ -46,7 +46,7 @@ fileprivate struct ProveByStoredTheorems : ContextProver {
         guard let prop = kc.tmOf(prop) else { return nil }
         for (_, thm) in context.storedTheorems {
             let stored = kc.tmOf(thm.prop)!
-            guard let subst = matching.match(pattern: stored, instance: prop).first else { continue }
+            guard let subst = matching.match1(pattern: stored, instance: prop) else { continue }
             guard let th = kc.substitute(subst, in: context.lift(thm)!) else { continue }
             return th
         }

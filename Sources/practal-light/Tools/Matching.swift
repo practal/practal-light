@@ -59,7 +59,7 @@ public struct Matching {
         
     public let kc : KernelContext
     
-    public func match(pattern : Tm, instance : Tm, frees : inout FreeVars) -> [TmSubstitution] {
+    public func match(pattern : Tm, instance : Tm, max_matches : Int, frees : inout FreeVars) -> [TmSubstitution] {
         
         guard frees.add(pattern) else { return [] }
         
@@ -199,18 +199,21 @@ public struct Matching {
             job.result.restrict(pattern.freeVars())
             job.result.compose(instanceRenaming.reversed())
             results.append(job.result)
-            guard !nextJobs.isEmpty else {
+            guard !nextJobs.isEmpty, results.count < max_matches else {
                 return results
             }
             job = nextJobs.removeLast()
         } while true
     }
     
-    public func match(pattern : Tm, instance : Tm) -> [TmSubstitution] {
+    public func match(pattern : Tm, instance : Tm, max_matches : Int = Int.max) -> [TmSubstitution] {
         var frees = FreeVars()
-        return match(pattern: pattern, instance: instance, frees: &frees)
+        return match(pattern: pattern, instance: instance, max_matches: max_matches, frees: &frees)
     }
-    
+        
+    public func match1(pattern : Tm, instance : Tm) -> TmSubstitution? {
+        return match(pattern: pattern, instance: instance, max_matches: 1).first
+    }
 }
 
 extension Matching {
@@ -219,7 +222,7 @@ extension Matching {
         guard let tm = kc.tmOf(term) else { return nil }
         for (i, ax) in kc.axioms.enumerated() {
             let ax = kc.tmOf(ax)!
-            guard let subst = match(pattern: ax, instance: tm).first else { continue }
+            guard let subst = match1(pattern: ax, instance: tm) else { continue }
             let th = kc.axiom(i)
             guard let sth = kc.substitute(subst, in: th) else { continue }
             return (axiom: i, thm: sth)
