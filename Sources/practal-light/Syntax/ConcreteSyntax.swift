@@ -6,6 +6,8 @@
 
 import Foundation
 
+public typealias Syntax = [(SyntaxPattern, [ConcreteSyntax])]
+
 public struct ConcreteSyntax : CustomStringConvertible, Hashable {
     
     public enum Priority : Hashable {
@@ -20,7 +22,28 @@ public struct ConcreteSyntax : CustomStringConvertible, Hashable {
                 return `default`
             }
         }
+    
     }
+    
+    public static let CONTROL_PRIO : Float = 0
+    public static let BINDER_PRIO : Float = 10
+    public static let LOGIC_PRIO : Float = 20
+    public static let REL_PRIO : Float = 30
+    public static let TYPE_PRIO : Float = 40
+    //public static let ARITH_PRIO : Float = 50
+    public static let APP_PRIO : Float = 60
+    
+    public static let EQUIV_RPRIO : Float = 0.1
+    public static let IMP_RPRIO : Float = 0.2
+    public static let OR_RPRIO : Float = 0.3
+    public static let AND_RPRIO : Float = 0.4
+    public static let NOT_RPRIO : Float = 0.5
+    
+    public static let UNION_RPRIO : Float = 0.1
+    public static let FUN_RPRIO : Float = 0.2
+    public static let BINARY_UNION_RPRIO : Float = 0.3
+    public static let BINARY_INTERSECTION_RPRIO : Float = 0.4
+    public static let TYPE_RPRIO : Float = 0.5
     
     public enum Fragment : Hashable {
         case Var(Var, raised: Bool)  // the raised vars get the next higher priority class

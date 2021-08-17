@@ -4,11 +4,11 @@
     final class practal_lightTests: XCTestCase {
         
         func v(_ s : String) -> Var {
-            return Var(primed: s)!
+            return Var(s)!
         }
         
         func c(_ s : String) -> Const {
-            return Const(qualified: s)!
+            return Const(s)!
         }
 
         func testConst() {
@@ -85,14 +85,14 @@
             XCTAssertEqual(eqAB, ConcreteSyntax(fragments: [.Var(v("A"), raised: true), .Space, .Text("="), .Space, .Var(v("B"), raised: true)], priority: .None))
         }
         
-        func testPretty() {
+        /*func testPretty() {
             let theory = Theory()
             theory.introduce("(eq. A B)", syntax: "A = B")
             let t = theory.parse("(u = (v = w))")
             print("pretty = \(theory.pretty(t))")
-        }
+        }*/
         
-        func testTheory() {
+        /*func testTheory() {
             let parser = PractalExprParser()
             func e(_ expr : String) -> Term {
                 let terms = parser.parse(expr: expr)
@@ -120,9 +120,9 @@
             XCTAssertEqual(theory.checkWellformedness(g), [v("x"): 0, v("P"): 1, v("u"): 0])
             let h = theory.parse("λ x : x. P[x]")
             XCTAssertEqual(theory.checkWellformedness(h), [v("x") : 0, v("P") : 1])
-        }
+        }*/
         
-        func testPracticalTypes() {
+        /*func testPracticalTypes() {
             let CONTROL_PRIO : Float = 0
             let BINDER_PRIO : Float = 10
             let LOGIC_PRIO : Float = 20
@@ -158,7 +158,8 @@
                 XCTAssertNotNil(theory.checkWellformedness(t))
                 print("introduce: \(theory.pretty(t))")
             }
-            
+
+        
             func theorem(_ expr : String) {
                 let t = theory.parse(expr)
                 XCTAssertNotNil(theory.checkWellformedness(t))
@@ -347,5 +348,82 @@
             axiom("⊤ ⟶ ⊤")
             axiom("(⊤ ⟶ ⊥) = ⊥")
             axiom("(⊤ ⟶ nil) = ⊥")
+        }*/
+        
+        func testContext() {
+            let context = Context.root()
+            print(context.kernel.description)
+
+            func show(_ expr : String) {
+                let t = context.parse(expr)!
+                XCTAssertTrue(context.isWellformed(t))
+                print("pretty: \(context.pretty(t)), raw: \(t)")
+            }
+             
+            show("ℙ")
+            show("x = ℙ")
+            show("t")
+            show("t : ℙ")
+            show("a ∧ t ∧ x")
+            show("r ∧ d ⟶ a ∧ t ∧ x ⟶ i ∧ j")
+            show("∀ x. ∃ y. x = y")
+
+        }
+        
+        func testMatching() {
+            let context = Context.root()
+            func match(_ s : String, max_matches : Int = Int.max) -> Int {
+                print("~~~~~~~~~~~~~~~~~")
+                let ax = context.parse(s)!
+                let ms = context.match(pattern: ax, instance: ax, max_matches: max_matches)
+                print("-----------------")
+                print("number of matches: \(ms.count)")
+                for m in ms {
+                    print("- \(m)")
+                }
+                return ms.count
+            }
+            XCTAssertEqual(match("x = y ⟶ P[x] ⟶ P[y]"), 1)
+            XCTAssertEqual(match("x = y ⟶ P[x]"), 2)
+            XCTAssertEqual(match("P[x]"), 3)
+            XCTAssertEqual(match("x = y ⟶ P[x] ⟶ P[y]", max_matches: 1), 1)
+            XCTAssertEqual(match("x = y ⟶ P[x]", max_matches: 1), 1)
+            XCTAssertEqual(match("P[x]", max_matches: 1), 1)
+        }
+        
+        func testLogics() {
+            let context = Logics.minimalLogic()//Logics.practicalTypes()
+            print(context.kernel.description)
+            
+            func show(_ expr : String) {
+                let t = context.parse(expr)!
+                XCTAssertTrue(context.isWellformed(t))
+                print("pretty: \(context.pretty(t)), raw: \(t)")
+            }
+            
+            /*show("ℙ")
+            show("x = ℙ")
+            show("t")
+            show("t : ℙ")
+            show("a ∧ ⊥ ∧ x")
+            show("r ∧ d ⟶ a ∧ ⊥ ∧ x ⟶ i ∧ j")
+            show("∀ x. ∃ y. x = y")*/
+        }
+        
+        func testKernelContext() {
+            let kc = KernelContext.root()
+            print(kc.description)
+        }
+        
+        func testTm() {
+            let parser = PractalExprParser()
+            let kc = KernelContext.root()
+            let term = parser.parse("(Practal.eq. a (Practal.ex x. (Practal.eq. x T)))")!
+            print("term = \(term)")
+            let tm = Tm.fromWellformedTerm(kc, term: term)!
+            print("tm = \(tm)")
+            var subst = TmSubstitution()
+            subst[Var("T")!] = TmWithHoles(holes: 0, .bound(1))
+            print("subst = \(subst.apply(tm)!)")
         }
     }

@@ -12,19 +12,19 @@ public class PractalExprParser {
     
     public let grammar : PractalExprGrammar
     public let parser : Parser<Character>
-    public let patterns : [(SyntaxPattern, [ConcreteSyntax])]
+    public let syntax : Syntax
     private let patternLookup : [String : (syntaxPattern : Int, concreteSyntax : Int)]
     
-    public init(patterns : [(SyntaxPattern, [ConcreteSyntax])] = []) {
-        self.grammar = PractalExprGrammar(patterns: patterns)
+    public init(syntax : Syntax = []) {
+        self.grammar = PractalExprGrammar(syntax: syntax)
         self.parser = grammar.parser()
-        self.patterns = patterns
-        self.patternLookup = PractalExprParser.makePatternLookup(patterns : patterns)
+        self.syntax = syntax
+        self.patternLookup = PractalExprParser.makePatternLookup(syntax : syntax)
     }
     
-    private static func makePatternLookup(patterns : [(SyntaxPattern, [ConcreteSyntax])]) -> [String : (syntaxPattern : Int, concreteSyntax : Int)] {
+    private static func makePatternLookup(syntax : Syntax) -> [String : (syntaxPattern : Int, concreteSyntax : Int)] {
         var lookup : [String : (syntaxPattern : Int, concreteSyntax : Int)] = [:]
-        for (i, (_, css)) in patterns.enumerated() {
+        for (i, (_, css)) in syntax.enumerated() {
             for cs in 0 ..< css.count {
                 let name = PractalExprGrammar.syntaxPatternNonterminalName(patternIndex: i, concreteSyntax: cs)
                 lookup[name] = (syntaxPattern: i, concreteSyntax: cs)
@@ -55,6 +55,12 @@ public class PractalExprParser {
             let trees = tree.explode()
             return Set(convert(expr: expr, syntaxTrees: Array(trees)))
         }
+    }
+    
+    public func parse(_ expr : String) -> Term? {
+        let terms = parse(expr: expr)
+        guard terms.count == 1 else { return nil }
+        return terms.first!
     }
     
     public func parse(css : String) -> ConcreteSyntax? {
@@ -109,13 +115,13 @@ public class PractalExprParser {
         
         func varOf(_ syntaxTree : SyntaxTree) -> Var {
             check(syntaxTree, symbol: VAR)
-            return Var(primed: textOf(syntaxTree))!
+            return Var(textOf(syntaxTree))!
         }
         
         func constOf(_ syntaxTree : SyntaxTree) -> Const {
             check(syntaxTree, symbol: CONST)
             let t = textOf(syntaxTree)
-            return Const(qualified: t)!
+            return Const(t)!
         }
         
         func varListOf(_ syntaxTree : SyntaxTree) -> [Var] {
@@ -164,7 +170,7 @@ public class PractalExprParser {
                 guard let pattern = patternLookup[symbol] else {
                     fatalError("cannot convert symbol '\(symbol)' with arity \(arity)")
                 }
-                let p = patterns[pattern.syntaxPattern]
+                let p = syntax[pattern.syntaxPattern]
                 let concreteSyntax = p.1[pattern.concreteSyntax]
                 return convConcrete(pattern: p.0, concreteSyntax: concreteSyntax, syntaxTree)
             }
@@ -194,8 +200,8 @@ public class PractalExprParser {
         
         func csfOf(_ syntaxTree : SyntaxTree) -> ConcreteSyntax.Fragment {
             switch syntaxTree.symbol {
-            case CSF_VAR: return .Var(Var(primed: textOf(syntaxTree))!, raised: false)
-            case CSF_RAISED_VAR: return .Var(Var(primed: textOf(syntaxTree))!, raised: true)
+            case CSF_VAR: return .Var(Var(textOf(syntaxTree))!, raised: false)
+            case CSF_RAISED_VAR: return .Var(Var(textOf(syntaxTree))!, raised: true)
             case CSF_SPACE: return .Space
             case CSF_TEXT: return .Text(textOf(syntaxTree))
             default: fatalError("don't know concrete syntax fragment '\(syntaxTree.symbol)'")

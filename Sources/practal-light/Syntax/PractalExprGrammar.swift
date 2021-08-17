@@ -44,10 +44,10 @@ public class PractalExprGrammar : TextGrammar {
     @Sym var CSF_RaisedVar : T
     @Sym var CSF_Text : T
     
-    private let patterns : [(SyntaxPattern, [ConcreteSyntax])]
+    private let syntax : Syntax
     
-    public init(patterns : [(SyntaxPattern, [ConcreteSyntax])]) {
-        self.patterns = patterns
+    public init(syntax : Syntax) {
+        self.syntax = syntax
         super.init()
     }
 
@@ -223,49 +223,6 @@ public class PractalExprGrammar : TextGrammar {
         }
         
     }
-
-    func constConcreteRuleBody(abstractSyntax : AbstractSyntax, concreteSyntax : ConcreteSyntax, E : N, E_raised : N) -> RuleBody {
-        var elems : [RuleBody] = []
-        var i = 0
-        var first : Bool = true
-        for fragment in concreteSyntax.fragments {
-            switch fragment {
-            case .Space:
-                if !first {
-                    elems.append(_OptSpace[i])
-                    first = true
-                }
-            case .Text(let syntax):
-                if !first {
-                    elems.append(_OptSpace[i])
-                }
-                first = false
-                elems.append(const(syntax))
-            case .Keyword(let keyword):
-                if !first {
-                    elems.append(_OptSpace[i])
-                }
-                first = false
-                let k = const(keyword)
-                add {
-                    prioritise(terminal: k, over: Var)
-                }
-                elems.append(k)
-            case let .Var(v, raised: raised):
-                if !first {
-                    elems.append(_OptSpace[i])
-                }
-                first = false
-                if abstractSyntax.binders.contains(v) {
-                    elems.append(Var[i])
-                } else {
-                    elems.append(raised ? E_raised[i] : E[i])
-                }
-            }
-            i += 1
-        }
-        return collectRuleBody(elems)
-    }
     
     func syntaxPatternRuleBody(syntaxPattern : SyntaxPattern, concreteSyntax : ConcreteSyntax, E : N, E_raised : N) -> RuleBody
     {
@@ -333,7 +290,7 @@ public class PractalExprGrammar : TextGrammar {
     
     public func addConcreteSyntaxRules() {
         var prios : Set<Float> = []
-        for (_, css) in patterns {
+        for (_, css) in syntax {
             for cs in css {
                 switch cs.priority {
                 case let .Level(p): prios.insert(p)
@@ -342,7 +299,7 @@ public class PractalExprGrammar : TextGrammar {
             }
         }
         let priorities = Priorities(prios, grammar: self)
-        for (i, (pattern, syntax)) in patterns.enumerated() {
+        for (i, (pattern, syntax)) in syntax.enumerated() {
             addPatternRules(patternIndex: i, pattern: pattern, syntax: syntax, priorities: priorities)
         }
     }

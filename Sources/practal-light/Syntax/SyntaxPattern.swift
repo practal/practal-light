@@ -11,6 +11,23 @@ public enum SyntaxPattern : Hashable {
     case variable(Var)
     case constant(Const, binders: [Var], params: [SyntaxPattern])
     
+    public func collect(vars : inout Set<Var>) {
+        switch self {
+        case let .variable(v): vars.insert(v)
+        case let .constant(_, binders: binders, params: params):
+            vars.formUnion(binders)
+            for p in params {
+                p.collect(vars: &vars)
+            }
+        }
+    }
+    
+    public func vars() -> Set<Var> {
+        var vs : Set<Var> = []
+        collect(vars: &vs)
+        return vs
+    }
+    
     public var isPattern : Bool {
         switch self {
         case .variable: return false
