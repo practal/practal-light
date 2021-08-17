@@ -27,27 +27,14 @@ public struct Matching {
         }
                 
     }
-        
-    public let kc : KernelContext
     
-    public func match(pattern : Tm, instance : Tm, frees : inout FreeVars) -> TmSubstitution? {
+    private struct Job {
         
-        guard frees.add(pattern) else { return nil }
+        var result : TmSubstitution
         
-        guard let (instance, instanceRenaming) = frees.addFresh(instance) else { return nil }
+        var tasks : [Task]
         
-        let constantFreeVars = instance.freeVars()
-
-        var result = TmSubstitution()
-        
-        var tasks = [Task(level: 0, pattern: pattern, instance: instance)]
-        
-        func addTask(_ task : Task) {
-            print("adding task: \(task)")
-            tasks.append(task)
-        }
-        
-        func addAndApply(_ v : Var, _ tmWithHoles : TmWithHoles) -> Bool {
+        mutating func substitute(_ v : Var, _ tmWithHoles : TmWithHoles) -> Bool {
             let subst = TmSubstitution(free: [v : tmWithHoles])
             print("substitute \(v) ==> \(tmWithHoles)")
             let newTasks = tasks.compactMap { task in task.apply(subst) }
@@ -58,10 +45,50 @@ public struct Matching {
             return true
         }
         
+        mutating func addTask(_ task : Task) {
+            print("adding task: \(task)")
+            tasks.append(task)
+        }
+        
+        mutating func nextTask() -> Task? {
+            if tasks.isEmpty { return nil }
+            return tasks.removeLast()
+        }
+        
+    }
+        
+    public let kc : KernelContext
+    
+    public func match(pattern : Tm, instance : Tm, frees : inout FreeVars) -> [TmSubstitution] {
+        
+        guard frees.add(pattern) else { return [] }
+        
+        guard let (instance, instanceRenaming) = frees.addFresh(instance) else { return [] }
+        
+        let constantFreeVars = instance.freeVars()
+        
+        var nextJobs : [Job] = []
+        var results : [TmSubstitution] = []
+
+        var job = Job(result: TmSubstitution(), tasks: [Task(level: 0, pattern: pattern, instance: instance)])
+                
+        func trySubstitutions( _ v : Var, substs : [TmWithHoles]) -> Bool {
+            var newJobs : [Job] = []
+            for s in substs {
+                var newJob = job
+                guard newJob.substitute(v, s) else { continue }
+                newJobs.append(newJob)
+            }
+            if newJobs.isEmpty { return false }
+            job = newJobs.first!
+            nextJobs.append(contentsOf: newJobs.dropFirst())
+            return true
+        }
+        
         func solve(level : Int, params1 : [Tm], params2 : [Tm]) -> Bool {
             guard params1.count == params2.count else { return false }
             for (i, param) in params1.enumerated() {
-                addTask(Task(level: level, pattern: param, instance: params2[i]))
+                job.addTask(Task(level: level, pattern: param, instance: params2[i]))
             }
             return true
         }
@@ -89,46 +116,44 @@ public struct Matching {
                 }) else { return false }
                 // todo: we just use the first parameter position found, if there are more we might be missing a possible match
                 let twh = TmWithHoles.projection(holes: params1.count, k)
-                return addAndApply(v, twh)
+                return job.substitute(v, twh)
             case let (.free(v, params: params1), .bound(index)): // index >= task.level
                 // todo: we are just taking the simplest possibility here, projections might also be candidates, and we would miss them
                 let twh = TmWithHoles.constant(holes: params1.count, index - task.level)
-                return addAndApply(v, twh)
+                return job.substitute(v, twh)
             case let (.free(v, params: params1), .const(c, _, params: _)):
                 guard let head = kc.constants[c]?.head else { return false }
                 let twh = TmWithHoles.constant(holes: params1.count, head: head) { v, a in frees.addFresh(v, arity: a) }
-                guard let lhs = twh.fillHoles(params1) else { return false }
-                guard addAndApply(v, twh) else { return false }
-                addTask(Task(level: task.level, pattern: lhs, instance: task.instance))
-                return true
+                job.addTask(task)
+                return trySubstitutions(v, substs: [twh])
             case let (.free(v1, params: params1), .free(v2, params: params2)):
                 let twh = TmWithHoles.variable(holes: params1.count, var: v2, numargs: params2.count) { v, a in frees.addFresh(v, arity: a) }
-                guard let lhs = twh.fillHoles(params1) else { return false }
-                print("twh = \(twh)")
-                print("params1 = \(params1)")
-                print("lhs = \(lhs)")
-                guard addAndApply(v1, twh) else { return false }
-                addTask(Task(level: task.level, pattern: lhs, instance: task.instance))
-                return true
+                job.addTask(task)
+                return trySubstitutions(v1, substs: [twh])
             }
         }
         
-        while !tasks.isEmpty {
-            let task = tasks.removeLast()
-            guard solveTask(task) else {
-                //print("could not solve task!")
-                return nil
+        jobLoop:
+        repeat {
+            while let task = job.nextTask() {
+                guard solveTask(task) else {
+                    guard !nextJobs.isEmpty else { return results }
+                    job = nextJobs.removeLast()
+                    continue jobLoop
+                }
             }
-        }
-                
-        result.restrict(pattern.freeVars())
-        result.compose(instanceRenaming.reversed())
-        
-        return result
-    
+            job.result.restrict(pattern.freeVars())
+            job.result.compose(instanceRenaming.reversed())
+            results.append(job.result)
+            guard !nextJobs.isEmpty else {
+                return results
+            }
+            job = nextJobs.removeLast()
+        } while true
+        fatalError("internal error")
     }
     
-    public func match(pattern : Tm, instance : Tm) -> TmSubstitution? {
+    public func match(pattern : Tm, instance : Tm) -> [TmSubstitution] {
         var frees = FreeVars()
         return match(pattern: pattern, instance: instance, frees: &frees)
     }
@@ -141,7 +166,7 @@ extension Matching {
         guard let tm = kc.tmOf(term) else { return nil }
         for (i, ax) in kc.axioms.enumerated() {
             let ax = kc.tmOf(ax)!
-            guard let subst = match(pattern: ax, instance: tm) else { continue }
+            guard let subst = match(pattern: ax, instance: tm).first else { continue }
             let th = kc.axiom(i)
             guard let sth = kc.substitute(subst, in: th) else { continue }
             return (axiom: i, thm: sth)

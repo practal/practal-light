@@ -374,7 +374,7 @@
             let context = Context.root()
             let ax = context.parse("x = y ⟶ P[x] ⟶ P[y]")!
             print("-----------------")
-            XCTAssertNotNil(context.match(pattern: ax, instance: ax))
+            XCTAssertNotEqual(context.match(pattern: ax, instance: ax).count, 0)
         }
         
         func testLogics() {

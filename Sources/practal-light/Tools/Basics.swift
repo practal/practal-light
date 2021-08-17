@@ -25,17 +25,17 @@ extension Context {
         return thm
     }
     
-    public func match(pattern : Term, instance : Term) -> TmSubstitution? {
+    public func match(pattern : Term, instance : Term) -> [TmSubstitution] {
         let kc = kernel
         let mc = Matching(kc: kc)
-        guard let pattern = kc.tmOf(pattern) else { return nil }
-        guard let instance = kc.tmOf(instance) else { return nil }
+        guard let pattern = kc.tmOf(pattern) else { return [] }
+        guard let instance = kc.tmOf(instance) else { return [] }
         return mc.match(pattern: pattern, instance: instance)
     }
 
     public func apply(hyp: Theorem, to implication : Theorem) -> Theorem? {
         guard let (h, _) = Term.dest_binary(implication.prop, op: .c_imp) else { return nil }
-        guard let subst = match(pattern: h, instance: hyp.prop) else { return nil }
+        guard let subst = match(pattern: h, instance: hyp.prop).first else { return nil }
         guard let imp = kernel.substitute(subst, in: implication) else { return nil }
         return kernel.modusPonens(hyp, imp)
     }
