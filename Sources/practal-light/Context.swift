@@ -173,7 +173,9 @@ extension Context {
     
     // todo: make this an atomic operation that either completely fails or completely succeeds
     public func declare(_ constant : String, syntax : [String], priority : ConcreteSyntax.Priority = .None) -> Const? {
+        //print("about to declare '\(constant)'")
         guard let parsed = parse(constant) else { return nil }
+        //print("parsed = '\(parsed)'")
         guard let const = declare(parsed) else { return nil }
         for s in syntax {
             guard addSyntax(const: const, syntax: s, priority: priority) else { return nil }
@@ -186,6 +188,13 @@ extension Context {
         return declare(constant, syntax: syntax, priority: ConcreteSyntax.Priority.from(priority, default: .Atomic))!
     }
     
+    @discardableResult
+    public func fix(_ name : String) -> Const {
+        let constant = "(local.\(name).)"
+        let syntax = "\(name)"
+        return declare(constant, syntax: syntax)
+    }
+    
     public func assume(_ prop : Term, prover : ContextProver = Prover.fail) -> AxiomID? {
         guard (extend { context in
             context.kernel.assume(prop) { _, prop in
@@ -195,9 +204,11 @@ extension Context {
         return kernel.axioms.count - 1
     }
     
-    public func assume(_ prop : String, prover : ContextProver = Prover.fail) -> AxiomID? {
+    @discardableResult
+    public func assume(_ prop : String, prover : ContextProver = Prover.trivial) -> Theorem? {
         guard let prop = parse(prop) else { return nil }
-        return assume(prop, prover: prover)
+        guard let id = assume(prop, prover: prover) else { return nil }
+        return kernel.axiom(id)
     }
     
     public func define(const : Const, hyps : [Term], body : Term, prover : ContextProver = Prover.fail) -> AxiomID? {

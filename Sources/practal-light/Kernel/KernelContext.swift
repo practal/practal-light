@@ -105,7 +105,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
 
     private func extend(_ addExtensions : [Ext], addAxioms : [Term] = [], mergeConstants : [Const : Def] = [:]) -> KernelContext {
         let mergedConstants = constants.merging(mergeConstants) { old, new in new }
-        return KernelContext(parent: uuid, extensions: extensions + addExtensions, axioms: axioms + addAxioms, constants: mergedConstants)
+        return KernelContext(parent: uuid, extensions: addExtensions, axioms: axioms + addAxioms, constants: mergedConstants)
     }
     
     public func assume(_ term : Term, prover : Prover) -> KernelContext? {
@@ -215,6 +215,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
             let constants = chain[from].constants
             var i = exts.count - 1
             while i >= 0 {
+                print("lift at \(i)): \(current)")
                 switch exts[i] {
                 case let .assume(hyp):
                     let (frees, arity) = chain[from].freeVarsOf(hyp)

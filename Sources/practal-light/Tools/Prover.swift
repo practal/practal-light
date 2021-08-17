@@ -76,6 +76,8 @@ public struct Prover {
     
     public static let byStoredTheorems : ContextProver = ProveByStoredTheorems()
     
+    public static let trivial : ContextProver = Prover.seq(Prover.byAxioms, Prover.byStoredTheorems)
+    
     public static func seq(_ provers : ContextProver...) -> ContextProver {
         return ContextProvers(provers: provers)
     }

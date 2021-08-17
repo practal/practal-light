@@ -125,10 +125,10 @@ public extension Term {
             switch term {
             case let .variable(v, params: params):
                 return .variable(v, params: params.map(repl))
-            case let .constant(const, binders: [], params: params):
+            case let .constant(c, binders: [], params: params) where c == const:
                 return .variable(w, params: params.map { p in replace(const: const, with: w, in: p) })
-            case let .constant(const, binders: binders, params: params):
-                return .constant(const, binders: binders, params: params.map(repl))
+            case let .constant(c, binders: binders, params: params):
+                return .constant(c, binders: binders, params: params.map(repl))
             }
         }
         return repl(term)

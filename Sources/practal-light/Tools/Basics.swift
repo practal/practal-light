@@ -11,8 +11,7 @@ extension Context {
     
     public func trivial(_ prop : String) -> Theorem? {
         guard let prop = parse(prop) else { return nil }
-        let prover = Prover.seq(Prover.byAxioms, Prover.byStoredTheorems)
-        return prover.prove(self, prop)
+        return Prover.trivial.prove(self, prop)
     }
     
     public func all(_ vars : String..., thm : Theorem) -> Theorem? {

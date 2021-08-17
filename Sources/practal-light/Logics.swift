@@ -47,12 +47,13 @@ public struct Logics {
         context.def("(\(c_true).)", "∀ x. x = x", syntax: "⊤")
         context.def("(\(c_equiv). p q)", "(p ⟶ q) ∧ (q ⟶ p)", syntax: "p ⟷ q", priority: S.LOGIC_PRIO + S.EQUIV_RPRIO)
                 
-        prove_true_is_true(context: context)
+        prove_true_is_true(context)
+        prove_subst(context)
         
         return context
     }
     
-    private static func prove_true_is_true(context : Context) {
+    private static func prove_true_is_true(_ context : Context) {
         let true_def = context.trivial("⊤ = (∀ x. x = x)")!
         let true_sym = context.symmetric(true_def)!
         let eq_subst = context.trivial("x = y ⟶ P[x] ⟶ P[y]")!
@@ -62,6 +63,22 @@ public struct Logics {
         let all_is_in_Prop = context.trivial("(∀ x. x = x) : ℙ")!
         let true_is_in_Prop = context.apply(true_sym, all_is_in_Prop, goal: "⊤ : ℙ", to: eq_subst)!
         context.store(thm: true_is_in_Prop)
+    }
+    
+    private static func prove_subst(_ context : Context) {
+        let c = context.spawn()
+        c.fix("x")
+        c.fix("y")
+        c.declare("(P. u)")
+        let xy = c.assume("x = y")!
+        c.assume("(P. u) : ℙ")
+        let Py = c.assume("(P. y)")!
+        let yx = c.symmetric(c.trivial("x = y")!)!
+        let eq_subst = c.trivial("y = x ⟶ (P. y) ⟶ (P. x)")!
+        let th = c.apply(yx, Py, goal: "(P. x)", to: eq_subst)!
+        print("*** th = \(th)")
+        let lifted = c.liftToTop(th) //context.lift(th, from: c)!
+        print("*** lifted = \(lifted)")
     }
             
     public static let c_false = Const.mkC("false")
