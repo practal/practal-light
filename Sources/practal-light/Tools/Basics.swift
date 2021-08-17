@@ -15,7 +15,7 @@ extension Context {
     }
     
     public func all(_ vars : String..., thm : Theorem) -> Theorem? {
-        var thm = thm
+        var thm = lift(thm)!
         for v in vars.reversed() {
             guard let v = Var(v) else { return nil }
             guard let qthm = kernel.allIntro(v, thm) else { return nil }
@@ -46,6 +46,8 @@ extension Context {
     }
 
     public func apply(hyp: Theorem, to implication : Theorem) -> Set<Theorem> {
+        let hyp = lift(hyp)!
+        let implication = lift(implication)!
         guard let (h, _) = Term.dest_binary(implication.prop, op: .c_imp) else { return [] }
         let substs = match(pattern: h, instance: hyp.prop)
         var thms : Set<Theorem> = []
@@ -59,6 +61,8 @@ extension Context {
     }
     
     public func apply(_ hyps : [Theorem], goal : Term?, to implication : Theorem) -> Set<Theorem> {
+        let hyps = hyps.map { h in lift(h)! }
+        let implication = lift(implication)!
         var patterns : [Term] = []
         var instances : [Term] = []
         var target = implication.prop

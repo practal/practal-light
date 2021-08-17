@@ -16,17 +16,16 @@ public struct Logics {
     
     public static func minimalLogic() -> Context {
         let context = Context.root()
-        print(context.kernel.description)
         
         context.declare("(\(c_or). p q)", syntax: "`p ∨ q", priority: S.LOGIC_PRIO + S.OR_RPRIO)
 
-        context.axiom("(x = y) : ℙ")
+        /*context.axiom("(x = y) : ℙ")
         context.axiom("(p ∧ q) : ℙ")
         context.axiom("(p ⟶ q) : ℙ")
         context.axiom("p ⟶ p : ℙ")
         context.axiom("(p ∨ q) : ℙ")
         context.axiom("(∀ x. P[x]) : ℙ")
-        context.axiom("(∃ x. P[x]) : ℙ")
+        context.axiom("(∃ x. P[x]) : ℙ")*/
         
         context.axiom("x = x")
         context.axiom("x = y ⟶ y = x")
@@ -60,9 +59,9 @@ public struct Logics {
         let all = context.all("x", thm: context.trivial("x = x")!)!
         let true_is_true = context.apply(true_sym, all, goal: "⊤", to: eq_subst)!
         context.store(thm: true_is_true)
-        let all_is_in_Prop = context.trivial("(∀ x. x = x) : ℙ")!
+        /*let all_is_in_Prop = context.trivial("(∀ x. x = x) : ℙ")!
         let true_is_in_Prop = context.apply(true_sym, all_is_in_Prop, goal: "⊤ : ℙ", to: eq_subst)!
-        context.store(thm: true_is_in_Prop)
+        context.store(thm: true_is_in_Prop)*/
     }
     
     private static func prove_subst(_ context : Context) {
@@ -71,14 +70,12 @@ public struct Logics {
         c.fix("y")
         c.declare("(P. u)")
         let xy = c.assume("x = y")!
-        c.assume("(P. u) : ℙ")
         let Py = c.assume("(P. y)")!
-        let yx = c.symmetric(c.trivial("x = y")!)!
+        let yx = c.symmetric(xy)!
         let eq_subst = c.trivial("y = x ⟶ (P. y) ⟶ (P. x)")!
         let th = c.apply(yx, Py, goal: "(P. x)", to: eq_subst)!
-        print("*** th = \(th)")
-        let lifted = c.liftToTop(th) //context.lift(th, from: c)!
-        print("*** lifted = \(lifted)")
+        let lifted = context.lift(th, from: c)!
+        context.store(thm: lifted)
     }
             
     public static let c_false = Const.mkC("false")
@@ -91,7 +88,7 @@ public struct Logics {
         
         context.def("(\(c_not). p)", "p ⟶ ⊥", syntax: "¬ `p", priority: S.LOGIC_PRIO + S.NOT_RPRIO)
         
-        context.axiom("p : ℙ ⟶ ⊥ ⟶ p")
+        context.axiom("⊥ ⟶ p")
         
         return context
     }
@@ -101,7 +98,6 @@ public struct Logics {
 
     public static func classicalLogic() -> Context {
         let context = intuitionisticLogic()
-        print(context.description)
         
         context.axiom("¬ ¬ p ⟶ p")
         

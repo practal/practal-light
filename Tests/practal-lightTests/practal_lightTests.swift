@@ -392,22 +392,9 @@
         }
         
         func testLogics() {
-            let context = Logics.minimalLogic()//Logics.practicalTypes()
+            let context = Logics.classicalLogic()//Logics.practicalTypes()
             print(context.kernel.description)
-            
-            func show(_ expr : String) {
-                let t = context.parse(expr)!
-                XCTAssertTrue(context.isWellformed(t))
-                print("pretty: \(context.pretty(t)), raw: \(t)")
-            }
-            
-            /*show("ℙ")
-            show("x = ℙ")
-            show("t")
-            show("t : ℙ")
-            show("a ∧ ⊥ ∧ x")
-            show("r ∧ d ⟶ a ∧ ⊥ ∧ x ⟶ i ∧ j")
-            show("∀ x. ∃ y. x = y")*/
+
         }
         
         func testKernelContext() {

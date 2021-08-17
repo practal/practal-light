@@ -187,7 +187,7 @@ public extension Term {
         return .constant(op, binders: [], params: [])
     }
     
-    static let c_Prop = mk_nullary(.c_Prop)
+    //static let c_Prop = mk_nullary(.c_Prop)
     
     static func mk_eq(_ left : Term, _ right : Term) -> Term {
         return mk_binary(Const.c_eq, left, right)
@@ -197,9 +197,9 @@ public extension Term {
         return mk_binary(Const.c_and, left, right)
     }
     
-    static func mk_in(_ left : Term, _ right : Term) -> Term {
+    /*static func mk_in(_ left : Term, _ right : Term) -> Term {
         return mk_binary(Const.c_in, left, right)
-    }
+    }*/
 
     static func mk_ands1(_ terms : [Term]) -> Term {
         switch terms.count {
@@ -243,11 +243,11 @@ public extension Term {
         return t
     }
 
-    static func mk_in_Prop(_ t : Term) -> Term {
+    /*static func mk_in_Prop(_ t : Term) -> Term {
         return mk_binary(Const.c_in, t, c_Prop)
-    }
+    }*/
     
-    static func dest_in_Prop(_ t : Term) -> Term? {
+    /*static func dest_in_Prop(_ t : Term) -> Term? {
         switch t {
         case .variable: return nil
         case .constant(Const.c_in, binders: [], params: let params):
@@ -255,7 +255,7 @@ public extension Term {
             return params[0]
         default: return nil
         }
-    }
+    }*/
     
     static func mk_prop(hyps: [Term] = [], _ concls: [Term]) -> Term? {
         if concls.isEmpty { return nil }

@@ -195,19 +195,17 @@ extension Context {
         return declare(constant, syntax: syntax)
     }
     
-    public func assume(_ prop : Term, prover : ContextProver = Prover.fail) -> AxiomID? {
+    public func assume(_ prop : Term) -> AxiomID? {
         guard (extend { context in
-            context.kernel.assume(prop) { _, prop in
-                prover.prove(context, prop)
-            }
+            context.kernel.assume(prop)
         }) else { return nil }
         return kernel.axioms.count - 1
     }
     
     @discardableResult
-    public func assume(_ prop : String, prover : ContextProver = Prover.trivial) -> Theorem? {
+    public func assume(_ prop : String) -> Theorem? {
         guard let prop = parse(prop) else { return nil }
-        guard let id = assume(prop, prover: prover) else { return nil }
+        guard let id = assume(prop) else { return nil }
         return kernel.axiom(id)
     }
     
@@ -238,8 +236,8 @@ extension Context {
         guard def(constant, definition, syntax: syntax, priority: ConcreteSyntax.Priority.from(priority, default: .Atomic)) != nil else { fatalError() }
     }
     
-    public func axiom(_ prop : String, prover : ContextProver = Prover.fail) {
-        guard assume(prop, prover: Prover.seq(prover, Prover.byAxioms)) != nil else { fatalError() }
+    public func axiom(_ prop : String) {
+        guard assume(prop) != nil else { fatalError() }
     }
 
 }
@@ -254,9 +252,9 @@ extension Context {
             guard context.addSyntax(const: const, syntax: syntax, priority: priority) else { fatalError() }
         }
         
-        add_syntax(const: Const.c_Prop, syntax: "ℙ")
+        //add_syntax(const: Const.c_Prop, syntax: "ℙ")
         add_syntax(const: Const.c_eq, syntax: "x = y", priority: ConcreteSyntax.REL_PRIO)
-        add_syntax(const: .c_in, syntax: "x : T", priority: ConcreteSyntax.REL_PRIO)
+        //add_syntax(const: .c_in, syntax: "x : T", priority: ConcreteSyntax.REL_PRIO)
         add_syntax(const: .c_and, syntax: "`p ∧ q", priority: ConcreteSyntax.LOGIC_PRIO + ConcreteSyntax.AND_RPRIO)
         add_syntax(const: .c_imp, syntax: "p ⟶ `q", priority: ConcreteSyntax.LOGIC_PRIO + ConcreteSyntax.IMP_RPRIO)
         add_syntax(const: .c_all, syntax: "∀ x. `P", priority: ConcreteSyntax.BINDER_PRIO)

@@ -108,10 +108,10 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         return KernelContext(parent: uuid, extensions: addExtensions, axioms: axioms + addAxioms, constants: mergedConstants)
     }
     
-    public func assume(_ term : Term, prover : Prover) -> KernelContext? {
-        print("assume \(term)")
+    public func assume(_ term : Term) -> KernelContext? {
+        //print("assume \(term)")
         guard isWellformed(term) else { return nil }
-        guard prove(prover, Term.mk_in_Prop(term)) else { return nil }
+        //guard prove(prover, Term.mk_in_Prop(term)) else { return nil }
         return extend([.assume(term)], addAxioms: [term])
     }
             
@@ -139,9 +139,9 @@ public struct KernelContext : Hashable, CustomStringConvertible {
             guard def.head.covers(frees) else { return nil }
         }
         var props : [Term] = []
-        for h in hyps {
+        /*for h in hyps {
             props.append(Term.mk_in_Prop(h))
-        }
+        }*/
         for d in def.definitions {
             let compatible = Term.mk_prop(hyps: d.hyps + hyps, Term.mk_eq(d.body, body))
             props.append(compatible)
@@ -215,7 +215,7 @@ public struct KernelContext : Hashable, CustomStringConvertible {
             let constants = chain[from].constants
             var i = exts.count - 1
             while i >= 0 {
-                print("lift at \(i)): \(current)")
+                //print("lift at \(i)): \(current)")
                 switch exts[i] {
                 case let .assume(hyp):
                     let (frees, arity) = chain[from].freeVarsOf(hyp)
@@ -307,18 +307,18 @@ public struct KernelContext : Hashable, CustomStringConvertible {
             return .variable(Var(name)!, params: params)
         }
         
-        introduce(.c_Prop)
+        //introduce(.c_Prop)
         introduce(.c_eq, params: tv("x"), tv("y"))
-        introduce(.c_in, params: tv("x"), tv("T"))
+        //introduce(.c_in, params: tv("x"), tv("T"))
         introduce(.c_and, params: tv("p"), tv("q"))
         introduce(.c_imp, params: tv("p"), tv("q"))
         introduce(.c_ex, binders: [v("x")], params: tv("P", tv("x")))
         introduce(.c_all, binders: [v("x")], params: tv("P", tv("x")))
         
-        kc = kc.assume(.mk_in_Prop(.mk_in(tv("x"), tv("T")))) { kc, prop in
+        /*kc = kc.assume(.mk_in_Prop(.mk_in(tv("x"), tv("T")))) { kc, prop in
             guard kc.isWellformed(prop) else { return nil }
             return Theorem(kc_uuid: kc.uuid, prop: prop)
-        }!
+        }!*/
         
         return kc
     }

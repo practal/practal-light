@@ -41,10 +41,10 @@ public struct Const : Hashable, CustomStringConvertible {
         return Const("Practal.\(name)")!
     }
     
-    public static let c_Prop = mkC("Prop")
+    //public static let c_Prop = mkC("Prop")
 
     public static let c_eq = mkC("eq")
-    public static let c_in = mkC("in")
+    //public static let c_in = mkC("in")
 
     public static let c_and = mkC("and")
     public static let c_imp = mkC("imp")
