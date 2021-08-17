@@ -49,6 +49,7 @@ public struct Matching {
         
         func addAndApply(_ v : Var, _ tmWithHoles : TmWithHoles) -> Bool {
             let subst = TmSubstitution(free: [v : tmWithHoles])
+            print("substitute \(v) ==> \(tmWithHoles)")
             let newTasks = tasks.compactMap { task in task.apply(subst) }
             guard newTasks.count == tasks.count else { return false }
             guard result.compose(subst) else { return false }
@@ -103,6 +104,9 @@ public struct Matching {
             case let (.free(v1, params: params1), .free(v2, params: params2)):
                 let twh = TmWithHoles.variable(holes: params1.count, var: v2, numargs: params2.count) { v, a in frees.addFresh(v, arity: a) }
                 guard let lhs = twh.fillHoles(params1) else { return false }
+                print("twh = \(twh)")
+                print("params1 = \(params1)")
+                print("lhs = \(lhs)")
                 guard addAndApply(v1, twh) else { return false }
                 addTask(Task(level: task.level, pattern: lhs, instance: task.instance))
                 return true

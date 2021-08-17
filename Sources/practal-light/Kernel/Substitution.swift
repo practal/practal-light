@@ -65,7 +65,7 @@ public struct TmWithHoles : CustomStringConvertible {
         for (i, p) in params.enumerated() {
             subst[i] = TmWithHoles(holes: 0, p)
         }
-        return subst.apply(level: holes, tm)
+        return subst.apply(level: 0, tm)
     }
     
     public static func projection(holes : Int, _ k : Int) -> TmWithHoles {
