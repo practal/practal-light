@@ -114,7 +114,7 @@ public final class Context {
     
     public func store(_ thm_name : String = UUID().description, thm : Theorem) {
         let thm = lift(thm)!
-        print("Storing theorem: \(thm)")
+        print("Storing theorem: \(pretty(thm.prop))")
         _theorems[thm_name] = thm
     }
     

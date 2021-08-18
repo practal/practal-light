@@ -81,6 +81,7 @@ public struct Matching {
         var job = Job(result: TmSubstitution(), tasks: [])
         for (i, p) in patterns.enumerated() {
             job.addTask(Task(level: 0, pattern: p, instance: instances[i]))
+            //print("*** \(p)  ==>  \(instances[i])")
         }
                 
         func trySubstitutions( _ v : Var, substs : [TmWithHoles]) -> Bool {

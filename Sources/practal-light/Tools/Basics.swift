@@ -105,4 +105,16 @@ extension Context {
         return apply(hyp: thm, to: sym).first
     }
     
+    public func apply(eq : Theorem, left : Theorem) -> Theorem? {
+        let eq_subst = trivial("x = y ⟶ x ⟶ y")!
+        guard let a = apply(eq, to: eq_subst).first else { return nil }
+        return apply(left, to: a).first
+    }
+    
+    public func apply(eq : Theorem, right : Theorem) -> Theorem? {
+        let eq_subst = trivial("x = y ⟶ y ⟶ x")!
+        guard let a = apply(eq, to: eq_subst).first else { return nil }
+        return apply(right, to: a).first
+    }
+
 }

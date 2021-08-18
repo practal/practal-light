@@ -392,7 +392,7 @@
         }
         
         func testLogics() {
-            let context = Logics.classicalLogic()//Logics.practicalTypes()
+            let context = Logics.classicalLogic()
             print(context.kernel.description)
 
         }
