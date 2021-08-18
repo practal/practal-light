@@ -65,15 +65,33 @@ public struct Logics {
     }
     
     private static func prove_subst(_ context : Context) {
+        prove_subst1(context)
+        prove_subst2(context)
+    }
+            
+    private static func prove_subst1(_ context : Context) {
         let c = context.spawn()
         c.fix("x")
         c.fix("y")
-        c.declare("(P. u)")
+        c.declare("(P. u)", syntax: "P[u]")
         let xy = c.assume("x = y")!
-        let Py = c.assume("(P. y)")!
+        let Py = c.assume("P[y]")!
         let yx = c.symmetric(xy)!
-        let eq_subst = c.trivial("y = x ⟶ (P. y) ⟶ (P. x)")!
-        let th = c.apply(yx, Py, goal: "(P. x)", to: eq_subst)!
+        let eq_subst = c.trivial("y = x ⟶ P[y] ⟶ P[x]")!
+        let th = c.apply(yx, Py, goal: "P[x]", to: eq_subst)!
+        let lifted = context.lift(th, from: c)!
+        context.store(thm: lifted)
+    }
+    
+    private static func prove_subst2(_ context : Context) {
+        let c = context.spawn()
+        c.fix("x")
+        c.fix("y")
+        c.declare("(A. u)", syntax: "A[u]")
+        let xy = c.assume("x = y")!
+        let eq_subst = c.trivial("x = y ⟶ A[x] = A[x] ⟶ A[x] = A[y]")!
+        let Ax_refl = c.trivial("A[x] = A[x]")!
+        let th = c.apply(xy, Ax_refl, goal: "A[x] = A[y]", to: eq_subst)!
         let lifted = context.lift(th, from: c)!
         context.store(thm: lifted)
     }
