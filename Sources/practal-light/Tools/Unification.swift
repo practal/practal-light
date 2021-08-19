@@ -103,20 +103,14 @@ public struct Unification {
             return true
         }
         
-        /*func couldMatch(pattern  : Tm, constVar : Var) -> Bool {
+        func couldMatch(pattern : Tm, const : Const) -> Bool {
             switch pattern {
-            case let .free(v, params: _):
-                if constantFreeVars.contains(v) {
-                    return v == constVar
-                } else {
-                    return true
-                }
-            case .bound, .const: return false
+            case .free: return true
+            case .bound: return false
+            case let .const(c, binders: _, params: _): return c == const
             }
         }
-        
-        */
-        
+
         func couldMatch(pattern : Tm, bound index : Int) -> Bool {
             return pattern == .bound(index)
         }
@@ -127,7 +121,6 @@ public struct Unification {
             case .const: return false
             }
         }
-
 
         func solveTask(_ task : Task) -> Bool {
             switch (task.lhs, task.rhs) {
@@ -160,7 +153,7 @@ public struct Unification {
                 }
                 return trySubstitutions(v, substs: twhs)
             case let (.free(v, params: params1), .const(c, _, params: _)):
-                /*guard let head = kc.constants[c]?.head else { return false }
+                guard let head = kc.constants[c]?.head else { return false }
                 job.addTask(task)
                 var twhs : [TmWithHoles] = []
                 let twh = TmWithHoles.constant(holes: params1.count, head: head) { v, a in frees.addFresh(v, arity: a) }
@@ -170,8 +163,7 @@ public struct Unification {
                         twhs.append(TmWithHoles.projection(holes: params1.count, i))
                     }
                 }
-                return trySubstitutions(v, substs: twhs)*/
-                fatalError()
+                return trySubstitutions(v, substs: twhs)
             case let (.free(v1, params: params1), .free(v2, params: params2)):
                 /*job.addTask(task)
                 var twhs : [TmWithHoles] = []
