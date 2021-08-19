@@ -126,8 +126,7 @@ public struct Logics {
         let th = c.apply(f, t, goal: "⊥", to: eq_subst)!
         let lifted = context.lift(th, from: c)!
         let not_def = context.trivial("(¬ (⊥ = ⊤)) = (⊥ = ⊤ ⟶ ⊥)")!
-        let eq_subst2 = context.trivial("(¬ (⊥ = ⊤)) = (⊥ = ⊤ ⟶ ⊥) ⟶ (⊥ = ⊤ ⟶ ⊥) ⟶ ¬ (⊥ = ⊤)")!
-        let fneq = context.apply(not_def, lifted, to: eq_subst2).first!
+        let fneq = context.apply(eq: not_def, right: lifted)!
         let ineq_def = context.trivial("(x ≠ y) = (¬ x = y)")!
         context.store(thm: context.apply(eq: ineq_def, right: fneq)!)
     }
@@ -138,7 +137,6 @@ public struct Logics {
 
     public static func intuitionisticLogic() -> Context {
         let context = minimalLogic()
-        
         
         context.axiom("⊥ ⟶ p")
         
