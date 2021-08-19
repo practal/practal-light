@@ -115,14 +115,11 @@ public struct Unification {
             }
         }
         
-        func couldMatch(pattern : Tm, const : Const) -> Bool {
-            switch pattern {
-            case let .free(v, params: _): return !constantFreeVars.contains(v)
-            case .bound: return false
-            case let .const(c, binders: _, params: _): return c == const
-            }
-        }
+        */
         
+        func couldMatch(pattern : Tm, bound index : Int) -> Bool {
+            return pattern == .bound(index)
+        }
         func couldMatch(pattern : Tm, constBound index : Int) -> Bool {
             switch pattern {
             case .free: return true
@@ -131,9 +128,6 @@ public struct Unification {
             }
         }
 
-        func couldMatch(pattern : Tm, bound index : Int) -> Bool {
-            return pattern == .bound(index)
-        }*/
 
         func solveTask(_ task : Task) -> Bool {
             switch (task.lhs, task.rhs) {
@@ -147,17 +141,16 @@ public struct Unification {
             case let (.bound(index1), .bound(index2)): return index1 == index2
             case (.bound, .free): return solveTask(task.reversed)
             case let (.free(v, params: params1), .bound(index)) where index < task.level:
-                /*job.addTask(task)
+                job.addTask(task)
                 var twhs : [TmWithHoles] = []
                 for (i, p) in params1.enumerated() {
                     if couldMatch(pattern: p, bound: index) {
                         twhs.append(TmWithHoles.projection(holes: params1.count, i))
                     }
                 }
-                return trySubstitutions(v, substs: twhs)*/
-                fatalError()
+                return trySubstitutions(v, substs: twhs)
             case let (.free(v, params: params1), .bound(index)): // index >= task.level
-                /*job.addTask(task)
+                job.addTask(task)
                 var twhs : [TmWithHoles] = []
                 twhs.append(TmWithHoles.constant(holes: params1.count, index - task.level))
                 for (i, p) in params1.enumerated() {
@@ -165,8 +158,7 @@ public struct Unification {
                         twhs.append(TmWithHoles.projection(holes: params1.count, i))
                     }
                 }
-                return trySubstitutions(v, substs: twhs)*/
-                fatalError()
+                return trySubstitutions(v, substs: twhs)
             case let (.free(v, params: params1), .const(c, _, params: _)):
                 /*guard let head = kc.constants[c]?.head else { return false }
                 job.addTask(task)
