@@ -8,7 +8,7 @@
 import Foundation
 
 /// Terms with DeBruijn indices
-public indirect enum Tm : Hashable, Equatable {
+public indirect enum Tm : Hashable, Equatable, Comparable {
     
     case bound(Int)
     
@@ -45,7 +45,62 @@ public indirect enum Tm : Hashable, Equatable {
             }
         }
     }
+        
+    public static func compare(_ params1: [Tm], _ params2: [Tm]) -> Int {
+        guard params1.count == params2.count else {
+            return params1.count < params2.count ? -1 : 1
+        }
+        for (i, p1) in params1.enumerated() {
+            let p2 = params2[i]
+            let c = compare(p1, p2)
+            guard c == 0 else { return c }
+        }
+        return 0
+    }
     
+    public static func compare(_ lhs: Tm, _ rhs: Tm) -> Int {
+        switch (lhs, rhs) {
+        case let (.bound(index1), .bound(index2)):
+            if index1 < index2 { return -1 }
+            else { return index1 == index2 ? 0 : 1 }
+        case let (.const(c1, binders1, params1), .const(c2, binders2, params2)):
+            guard c1 == c2 else {
+                return c1.name.id < c2.name.id ? -1 : 1
+            }
+            guard binders1.count == binders2.count else {
+                return binders1.count < binders2.count ? -1 : 1
+            }
+            return compare(params1, params2)
+        case let (.free(v1, params1), .free(v2, params2)):
+            guard v1 == v2 else {
+                return v1 < v2 ? -1 : 1
+            }
+            return compare(params1, params2)
+        case (.bound, _): return -1
+        case (_, .bound): return 1
+        case (.const, _): return -1
+        case (_, .const): return 1
+        }
+    }
+    
+    public static func < (lhs: Tm, rhs: Tm) -> Bool {
+        return compare(lhs, rhs) < 0
+    }
+    
+    public var size : Int {
+        switch self {
+        case .bound: return 1
+        case let .free(_, params: params):
+            var s = 1
+            for p in params { s += p.size }
+            return s
+        case let .const(_, binders: _, params: params):
+            var s = 1
+            for p in params { s += p.size }
+            return s
+        }
+    }
+
 }
 
 extension Tm : CustomStringConvertible {
@@ -190,6 +245,35 @@ extension Tm {
         }
     }
     
+    public func toZeroLevel(level : Int) -> Tm? {
+        switch self {
+        case let .bound(index):
+            if index < level { return nil }
+            else { return .bound(index - level) }
+        case let .free(v, params: params):
+            let sparams = params.compactMap { p in p.toZeroLevel(level: level) }
+            guard sparams.count == params.count else { return nil }
+            return .free(v, params: sparams)
+        case let .const(c, binders: binders, params: params):
+            let sublevel = level + binders.count
+            let sparams = params.compactMap { p in p.toZeroLevel(level: sublevel) }
+            guard sparams.count == params.count else { return nil }
+            return .const(c, binders: binders, params: sparams)
+        }
+    }
+    
+    public func occursForSure(_ v : Var) -> Bool {
+        switch self {
+        case .bound: return false
+        case let .free(w, params: _): return w == v
+        case let .const(_, binders: _, params: params):
+            for p in params {
+                if p.occursForSure(v) { return true }
+            }
+            return false
+        }
+    }
+
 }
 
 extension KernelContext {

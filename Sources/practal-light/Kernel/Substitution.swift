@@ -48,6 +48,10 @@ public struct TmWithHoles : CustomStringConvertible {
         }
     }
     
+    public var size : Int {
+        return tm.size
+    }
+    
     public func incrementDangling(delta : Int) -> TmWithHoles {
         guard delta >= 0 else { fatalError() }
         let atm = tm.incrementDangling(level: holes, delta: delta)
@@ -178,6 +182,17 @@ public struct TmSubstitution {
             guard let twh = TmWithHoles(kc, wellformed: t) else { return nil }
             free[v] = twh
         }
+    }
+    
+    public var size : Int {
+        var s = 0
+        for (_, t) in free {
+            s += t.size
+        }
+        for (_, t) in bound {
+            s += t.size
+        }
+        return s
     }
     
     public mutating func restrict(_ vars : Set<Var>) {

@@ -413,4 +413,35 @@
             subst[Var("T")!] = TmWithHoles(holes: 0, .bound(1))
             print("subst = \(subst.apply(tm)!)")
         }
+        
+        func testUnification() {
+            let context = Context.root()
+            let _ = context.fix("a")
+            let _ = context.fix("b")
+            let _ = context.declare("(f. k)", syntax: ["f k"])
+            func unify(_ e1 : String, _ e2 : String) {
+                print("================================")
+                let tm1 = context.parseAsTm(e1)!
+                let tm2 = context.parseAsTm(e2)!
+                print("trying to unify '\(tm1)' and '\(tm2)'")
+                let u = Unification(kc: context.kernel)
+                let jobs = u.unify(lhs: tm1, rhs: tm2)
+                for job in jobs {
+                    print("---------------")
+                    print(job.description)
+                }
+                print("---------------")
+                print("found \(jobs.count) resulting jobs")
+            }
+            unify("a", "a")
+            unify("a", "b")
+            unify("x", "a")
+            unify("X[a]", "Y[b]")
+            unify("f x", "f a")
+            unify("X[f a]", "f X[a]")
+            unify("X[f a]", "f Y[a]")
+            unify("G", "f G")
+            unify("F[G[a]]", "F[b]")
+            print("================================")
+        }
     }

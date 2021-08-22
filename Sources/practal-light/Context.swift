@@ -145,6 +145,11 @@ extension Context {
         return parser.parse(expr)
     }
     
+    public func parseAsTm(_ expr : String) -> Tm? {
+        guard let term = parse(expr) else { return nil }
+        return Tm.fromWellformedTerm(kernel, term: term)
+    }
+    
     public func pretty(_ term : Term) -> String {
         return printer.printTerm(term)
     }
