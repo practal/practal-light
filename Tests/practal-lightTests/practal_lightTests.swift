@@ -424,8 +424,6 @@
                 let tm1 = context.parseAsTm(e1)!
                 let tm2 = context.parseAsTm(e2)!
                 print("trying to unify '\(tm1)' and '\(tm2)'")
-                //let u = UnificationOld(kc: context.kernel)
-                //let jobs = u.unify(lhs: tm1, rhs: tm2)
                 let jobs = Unification.unify(kernelContext: context.kernel, lhs: tm1, rhs: tm2)
                 for job in jobs {
                     print("---------------")
