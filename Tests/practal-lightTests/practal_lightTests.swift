@@ -425,9 +425,14 @@
                 let tm2 = context.parseAsTm(e2)!
                 print("trying to unify '\(tm1)' and '\(tm2)'")
                 let jobs = Unification.unify(kernelContext: context.kernel, lhs: tm1, rhs: tm2)
-                for job in jobs {
+                if jobs.isEmpty {
                     print("---------------")
-                    print(job.description)
+                    print("unification is impossible")
+                } else {
+                    for job in jobs {
+                        print("---------------")
+                        print(job.description)
+                    }
                 }
             }
             unify("a", "a")
