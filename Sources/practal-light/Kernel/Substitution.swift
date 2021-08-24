@@ -109,6 +109,22 @@ public struct TmWithHoles : CustomStringConvertible {
         return TmWithHoles(holes: holes, tm)
     }
     
+    private static func mkBoundsParams(_ bounds : Set<Int>) -> [Tm] {
+        var bounds = Array(bounds)
+        bounds.sort()
+        var tms : [Tm] = []
+        for b in bounds {
+            tms.append(.bound(b))
+        }
+        return tms
+    }
+    
+    public static func hoPattern(holes : Int, deps : [Int], fresh : Var) -> TmWithHoles {
+        let params = deps.map { d in Tm.bound(d) }
+        let tm = Tm.free(fresh, params: params)
+        return TmWithHoles(holes: holes, tm)
+    }
+
     public var description : String {
         return "([\(holes)] \(tm))"
     }
@@ -254,6 +270,16 @@ public struct TmSubstitution {
                 return false
             }
             newBound[i] = s
+        }
+        for (v, t) in subst.free {
+            if newFree[v] == nil {
+                newFree[v] = t
+            }
+        }
+        for (i, t) in subst.bound {
+            if newBound[i] == nil {
+                newBound[i] = t
+            }
         }
         free = newFree
         bound = newBound

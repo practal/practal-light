@@ -273,6 +273,20 @@ extension Tm {
             return false
         }
     }
+    
+    public func isBound(level : Int) -> Bool {
+        switch self {
+        case let .bound(index): return index < level
+        default: return false
+        }
+    }
+    
+    public var boundIndex : Int? {
+        switch self {
+        case let .bound(index): return index
+        default: return nil
+        }
+    }
 
 }
 

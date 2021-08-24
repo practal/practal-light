@@ -100,7 +100,7 @@ public struct Unification {
         case fails
         case trivial
         case tasks([Task])
-        case branch([Task], Var, [TmWithHoles])
+        case branch([Task], [TmSubstitution])
     }
 
     
@@ -127,15 +127,19 @@ public struct Unification {
             result.restrict(vs)
         }
         
-        mutating func substitute(_ v : Var, _ tmWithHoles : TmWithHoles) -> Bool {
-            let subst = TmSubstitution(free: [v : tmWithHoles])
-            //print("substitute \(v) ==> \(tmWithHoles)")
+        mutating func substitute(_ subst : TmSubstitution) -> Bool {
             let newTasks = tasks.compactMap { task in task.apply(subst) }
             guard newTasks.count == tasks.count else { return false }
             guard result.compose(subst) else { return false }
-            result[v] = tmWithHoles
             tasks = Set(newTasks)
             return true
+        }
+
+            
+        mutating func substitute(_ v : Var, _ tmWithHoles : TmWithHoles) -> Bool {
+            let subst = TmSubstitution(free: [v : tmWithHoles])
+            return substitute(subst)
+            //print("substitute \(v) ==> \(tmWithHoles)")
         }
                 
         mutating func addTask(_ task : Task) {
@@ -170,7 +174,6 @@ public struct Unification {
         
     }
     
-        
     public let kc : KernelContext
     
     public func unify(lhs : [Tm], rhs : [Tm], frees : inout FreeVars) -> [Job] {
@@ -192,11 +195,11 @@ public struct Unification {
             //print("*** \(p)  <=>  \(instances[i])")
         }
                 
-        func trySubstitutions( _ v : Var, substs : [TmWithHoles]) -> Bool {
+        func trySubstitutions(_ substs : [TmSubstitution]) -> Bool {
             var newJobs : [Job] = []
             for s in substs {
                 var newJob = job
-                guard newJob.substitute(v, s) else { continue }
+                guard newJob.substitute(s) else { continue }
                 newJobs.append(newJob)
             }
             if newJobs.isEmpty { return false }
@@ -235,6 +238,15 @@ public struct Unification {
             return tasks
         }
         
+        func formsHigherOrderPattern(level : Int, params: [Tm]) -> Bool {
+            guard (params.allSatisfy { p in p.isBound(level: level) }) else { return false }
+            return Set(params).count == params.count
+        }
+        
+        func makeSubsts(_ v : Var, _ twhs : [TmWithHoles]) -> [TmSubstitution] {
+            return twhs.map { t in TmSubstitution(free: [v : t]) }
+        }
+        
         func findOracleTopPrio(for task : Task) -> Oracle? {
             guard !task.isTrivial else { return .trivial }
             switch (task.lhs, task.rhs) {
@@ -250,7 +262,7 @@ public struct Unification {
                         twhs.append(TmWithHoles.projection(holes: params.count, i))
                     }
                 }
-                return .branch([task], v, twhs)
+                return .branch([task], makeSubsts(v, twhs))
             case let (.bound(index), .free(v, params: params)) where index >= task.level:
                 var twhs : [TmWithHoles] = []
                 twhs.append(TmWithHoles.constant(holes: params.count, index - task.level))
@@ -259,7 +271,7 @@ public struct Unification {
                         twhs.append(TmWithHoles.projection(holes: params.count, i))
                     }
                 }
-                return .branch([task], v, twhs)
+                return .branch([task], makeSubsts(v, twhs))
             case let (.const(const1, binders1, params1), .const(const2, binders2, params2)):
                 if const1 != const2 || binders1.count != binders2.count || params1.count != params2.count {
                     return .fails
@@ -270,15 +282,43 @@ public struct Unification {
             case let (tm, .free(v, params: [])) where !tm.freeVars().contains(v):
                 guard let tm = tm.toZeroLevel(level: task.level) else { return .fails }
                 let twh = TmWithHoles(holes: 0, tm)
-                return .branch([], v, [twh])
+                return .branch([], makeSubsts(v, [twh]))
             case let (.free(v, params: []), tm) where !tm.freeVars().contains(v):
                 guard let tm = tm.toZeroLevel(level: task.level) else { return .fails }
                 let twh = TmWithHoles(holes: 0, tm)
-                return .branch([], v, [twh])
+                return .branch([], makeSubsts(v, [twh]))
             case let (.const, .free(v, params: [])) where task.lhs.occursForSure(v):
                 return .fails
             case let (.free(v, params: []), .const) where task.rhs.occursForSure(v):
                 return .fails
+            case let (.free(v1, params: params1), .free(v2, params: params2)) where
+                formsHigherOrderPattern(level: task.level, params: params1) &&
+                formsHigherOrderPattern(level: task.level, params: params2):
+                if v1 == v2 {
+                    guard params1.count == params2.count else { return .fails }
+                    var deps : [Int] = []
+                    for (i, p) in params1.enumerated() {
+                        if p == params2[i] {
+                            deps.append(i)
+                        }
+                    }
+                    let H = frees.addFresh(v1, arity: deps.count)
+                    let twh = TmWithHoles.hoPattern(holes: params1.count, deps: deps, fresh: H)
+                    return .branch([], makeSubsts(v1, [twh]))
+                } else {
+                    var bvars1 : Set<Int> = []
+                    var bvars2 : Set<Int> = []
+                    for p in params1 { bvars1.insert(p.boundIndex!) }
+                    for p in params2 { bvars2.insert(p.boundIndex!) }
+                    let bvars = Array(bvars1.intersection(bvars2))
+                    let deps1 = bvars.map { v in params1.firstIndex { p in p.boundIndex! == v }! }
+                    let deps2 = bvars.map { v in params2.firstIndex { p in p.boundIndex! == v }! }
+                    let H = frees.addFresh(v1, arity: bvars.count)
+                    let twh1 = TmWithHoles.hoPattern(holes: params1.count, deps: deps1, fresh: H)
+                    let twh2 = TmWithHoles.hoPattern(holes: params2.count, deps: deps2, fresh: H)
+                    let subst = TmSubstitution(free: [v1 : twh1, v2 : twh2])
+                    return .branch([], [subst])
+                }
             default: return nil
             }
         }
@@ -295,7 +335,7 @@ public struct Unification {
                         twhs.append(TmWithHoles.projection(holes: params.count, i))
                     }
                 }
-                return .branch([task], v, twhs)
+                return .branch([task], makeSubsts(v, twhs))
             default: return nil
             }
         }
@@ -320,9 +360,9 @@ public struct Unification {
             case let .tasks(tasks):
                 for task in tasks { job.addTask(task) }
                 return true
-            case let .branch(tasks, v, twhs):
+            case let .branch(tasks, substs):
                 for task in tasks { job.addTask(task) }
-                return trySubstitutions(v, substs: twhs)
+                return trySubstitutions(substs)
             }
         }
                         
