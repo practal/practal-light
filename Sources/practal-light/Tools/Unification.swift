@@ -1,54 +1,14 @@
 //
 //  Unification.swift
 //
-//  Created by Steven Obua on 19/08/2021.
+//  Created by Steven Obua on 24/08/2021.
 //
 
 import Foundation
 
 public struct Unification {
     
-    private enum HeadType {
-        case bound
-        case const
-        case free
-        
-        static func of(_ tm : Tm, level : Int) -> HeadType {
-            switch tm {
-            case let .bound(index): return index < level ? .bound : .const
-            case .free: return .free
-            case .const: return .const
-            }
-        }
-    }
-    
-    private enum Case {
-        case bb
-        case bc
-        case cb
-        case bf
-        case fb
-        case cc
-        case cf
-        case fc
-        case ff
-        
-        static func of(_ h1 : HeadType, _ h2 : HeadType) -> Case {
-            switch (h1, h2) {
-            case (.bound, .bound): return .bb
-            case (.bound, .const): return .bc
-            case (.const, .bound): return .cb
-            case (.bound, .free): return .bf
-            case (.free, .bound): return .fb
-            case (.const, .const): return .cc
-            case (.const, .free): return .cf
-            case (.free, .const): return .fc
-            case (.free, .free): return .ff
-            }
-        }
-    }
-    
-    public struct Task : CustomStringConvertible, Hashable {
+    public struct Constraint : CustomStringConvertible, Hashable {
         
         let level : Int
                 
@@ -58,157 +18,273 @@ public struct Unification {
         
         init(level : Int, lhs : Tm, rhs : Tm) {
             self.level = level
-            if Tm.compare(lhs, rhs) <= 0 {
-                self.lhs = lhs
-                self.rhs = rhs
-            } else {
-                self.lhs = rhs
-                self.rhs = lhs
-            }
+            self.lhs = lhs
+            self.rhs = rhs
         }
         
-        func apply(_ subst : TmSubstitution) -> Task? {
+        func apply(_ subst : TmSubstitution) -> Constraint? {
             guard let l = subst.apply(level: level, lhs) else { return nil }
             guard let r = subst.apply(level: level, rhs) else { return nil }
-            return Task(level: level, lhs: l, rhs: r)
+            return Constraint(level: level, lhs: l, rhs: r)
         }
         
         public var description: String {
             return "[\(level)] \(lhs) ≟ \(rhs)"
         }
         
-        var reversed: Task {
-            return Task(level: level, lhs: rhs, rhs: lhs)
+        public var size: Int {
+            return max(lhs.size, rhs.size)
         }
         
-        private var headTypes: (lhs: HeadType, rhs: HeadType) {
-            return (lhs: HeadType.of(lhs, level: level), rhs: HeadType.of(rhs, level: level))
+        var reversed: Constraint {
+            return Constraint(level: level, lhs: rhs, rhs: lhs)
         }
-        
-        private var `case`: Case {
-            let h = headTypes
-            return Case.of(h.lhs, h.rhs)
-        }
-        
-        fileprivate var isTrivial : Bool {
+                
+        var isTrivial : Bool {
             return lhs == rhs
         }
         
     }
     
-    fileprivate enum Oracle {
-        case fails
-        case trivial
-        case tasks([Task])
-        case branch([Task], [TmSubstitution])
+    public struct Action {
+        let addConstraints : [Constraint]
+        let addElimVars : [Var]
+        let addIdVars : [Var]
+        let branches : [TmSubstitution]?
+        
+        static let fail = Action(branches: [])
+        static let succeed = Action()
+        
+        init(addConstraints: [Constraint] = [], addElimVars: [Var] = [], addIdVars: [Var] = [], branches: [TmSubstitution]? = nil) {
+            self.addConstraints = addConstraints
+            self.addElimVars = addElimVars
+            self.addIdVars = addIdVars
+            self.branches = branches
+        }
+        
+        static func branch(_ constraints : [Constraint], _ v : Var, _ twhs : [TmWithHoles]) -> Action {
+            let substs = twhs.map { t in TmSubstitution(free : [v : t]) }
+            return Action(addConstraints: constraints, branches: substs)
+        }
     }
-
     
-    public struct Job : CustomStringConvertible {
+    public typealias Fresh = (Var, Int) -> Var
+    
+    public typealias Strategy = (UnificationParams, Constraint) -> Action?
+    
+    public struct Leaf : CustomStringConvertible {
         
-        private var result : TmSubstitution
+        private let substitution : TmSubstitution
         
-        private var tasks : Set<Task>
+        private let constraints : [Constraint]
         
-        init() {
-            result = TmSubstitution()
-            tasks = []
+        private let elimVars : Set<Var>
+        
+        private let idVars : Set<Var>
+        
+        
+        init(constraints : [Constraint]) {
+            self.substitution = TmSubstitution()
+            self.constraints = constraints
+            self.elimVars = []
+            self.idVars = []
         }
         
-        var getResult : TmSubstitution {
-            return result
+        private init(_ substitution : TmSubstitution, _ constraints : [Constraint], _ elimVars : Set<Var>, _ idVars : Set<Var>) {
+            self.substitution = substitution
+            self.constraints = constraints
+            self.elimVars = elimVars
+            self.idVars = idVars
         }
         
-        var leftTasks : Set<Task> {
-            return tasks
+        var size : Int {
+            return substitution.size
         }
-        
-        mutating func restrict(_ vs : Set<Var>) {
-            result.restrict(vs)
-        }
-        
-        mutating func substitute(_ subst : TmSubstitution) -> Bool {
-            let newTasks = tasks.compactMap { task in task.apply(subst) }
-            guard newTasks.count == tasks.count else { return false }
-            guard result.compose(subst) else { return false }
-            tasks = Set(newTasks)
-            return true
+                        
+        func substitute(_ subst : TmSubstitution) -> Leaf? {
+            let newConstraints = constraints.compactMap { c in c.apply(subst) }
+            guard newConstraints.count == constraints.count else { return nil }
+            var s = substitution
+            guard s.compose(subst) else { return nil }
+            return Leaf(s, newConstraints, elimVars, idVars)
         }
 
-            
-        mutating func substitute(_ v : Var, _ tmWithHoles : TmWithHoles) -> Bool {
-            let subst = TmSubstitution(free: [v : tmWithHoles])
-            return substitute(subst)
-            //print("substitute \(v) ==> \(tmWithHoles)")
-        }
-                
-        mutating func addTask(_ task : Task) {
-            tasks.insert(task)
-        }
-        
-        fileprivate mutating func nextTask(criterium : (Task) -> Oracle?) -> Oracle? {
-            for task in tasks {
-                guard let oracle = criterium(task) else {
-                    continue
-                }
-                tasks.remove(task)
-                return oracle
-            }
-            return nil
-        }
-        
-        mutating func nextTask() -> Task? {
-            guard !tasks.isEmpty else { return nil }
-            return tasks.removeFirst()
-        }
-        
         public var description: String {
-            var d = "Job (\(tasks.count) tasks left): \(result)\n"
-            for task in tasks {
-                d.append("--- \(task)\n")
+            guard !constraints.isEmpty else {
+                return "Solved: \(substitution)"
+            }
+            var d = "Unsolved (\(constraints.count) constraints left): \(substitution)\n"
+            for c in constraints {
+                d.append("  --- \(c)\n")
             }
             return d
         }
         
+        var solved: Bool {
+            return constraints.isEmpty
+        }
         
+        func process(_ up : UnificationParams, _ strategy : Strategy) -> [Leaf]? {
+            for (i, c) in constraints.enumerated() {
+                guard let action = strategy(up, c) else { continue }
+                var cs = constraints
+                cs.remove(at: i)
+                cs.append(contentsOf: action.addConstraints)
+                let newLeaf = Leaf(substitution, cs, elimVars.union(action.addElimVars), idVars.union(action.addIdVars))
+                guard let branches = action.branches else { return [newLeaf] }
+                var newLeafs : [Leaf] = []
+                for subst in branches {
+                    guard let l = newLeaf.substitute(subst) else { continue }
+                    newLeafs.append(l)
+                }
+                return newLeafs
+            }
+            return nil
+        }
+        
+        func finish(_ domain : Set<Var>) -> Leaf {
+            var s = substitution
+            s.restrict(domain)
+            return Leaf(s, constraints, elimVars, idVars)
+        }
         
     }
     
-    public let kc : KernelContext
+    public struct UnificationParams {
+        public let kernelContext : KernelContext
+        public let fresh : Fresh
+        public let domain : Set<Var>
+        public let sizeLimit : Int
+    }
+        
+    public static func unify(_ up : UnificationParams, constraints : [Constraint], strategies : [Strategy]) -> [Leaf] {
+        var leafs : [Leaf] = [Leaf(constraints: constraints)]
+        var changed = true
+        var finished : [Leaf] = []
+        while changed {
+            changed = false
+            var newLeafs : [Leaf] = []
+        nextLeaf:
+            for leaf in leafs {
+                if leaf.size <= up.sizeLimit {
+                    for strategy in strategies {
+                        if let processed = leaf.process(up, strategy) {
+                            newLeafs.append(contentsOf: processed)
+                            changed = true
+                            continue nextLeaf
+                        }
+                    }
+                }
+                finished.append(leaf.finish(up.domain))
+            }
+            leafs = newLeafs
+        }
+        return finished
+    }
     
-    public func unify(lhs : [Tm], rhs : [Tm], frees : inout FreeVars) -> [Job] {
-        guard lhs.count == rhs.count else { fatalError() }
+    public static func unify(kernelContext : KernelContext, lhs : Tm, rhs : Tm) -> [Leaf] {
+        let sizeLimit = (lhs.size + rhs.size + 1) * 10
         
         var freeVars = FreeVars()
+        var frees = FreeVars()
         
-        for t in lhs + rhs {
+        for t in [lhs, rhs] {
             guard frees.add(t) else { return [] }
             freeVars.add(t)
         }
-                
-        var nextJobs : [Job] = []
-        var results : [Job] = []
+        
+        func fresh(_ v : Var, _ arity : Int) -> Var {
+            return frees.addFresh(v, arity: arity)
+        }
+        
+        let up = UnificationParams(kernelContext: kernelContext, fresh: fresh, domain: freeVars.vars, sizeLimit: sizeLimit)
+        
+        let constraint = Constraint(level: 0, lhs: lhs, rhs: rhs)
+        
+        return unify(up, constraints: [constraint], strategies: strategies)
+    }
 
-        var job = Job()
-        for (i, l) in lhs.enumerated() {
-            job.addTask(Task(level: 0, lhs: l, rhs: rhs[i]))
-            //print("*** \(p)  <=>  \(instances[i])")
-        }
-                
-        func trySubstitutions(_ substs : [TmSubstitution]) -> Bool {
-            var newJobs : [Job] = []
-            for s in substs {
-                var newJob = job
-                guard newJob.substitute(s) else { continue }
-                newJobs.append(newJob)
+    public static func trivialStrategy(_ up : UnificationParams, _ constraint : Constraint) -> Action? {
+        return constraint.isTrivial ? .succeed : nil
+    }
+    
+    public static func rigidRigidStrategy(_ up : UnificationParams, _ constraint : Constraint) -> Action? {
+        switch (constraint.lhs, constraint.rhs) {
+        case let (.const(c1, binders1, params1), .const(c2, binders2, params2)):
+            guard c1 == c2 && binders1.count == binders2.count && params1.count == params2.count else {
+                return .fail
             }
-            if newJobs.isEmpty { return false }
-            job = newJobs.first!
-            nextJobs.append(contentsOf: newJobs.dropFirst())
-            return true
+            var cs : [Constraint] = []
+            let level = constraint.level + binders1.count
+            for (i, p1) in params1.enumerated() {
+                let p2 = params2[i]
+                cs.append(Constraint(level: level, lhs: p1, rhs: p2))
+            }
+            return Action(addConstraints: cs)
+        case let (.bound(b1), .bound(b2)): return b1 == b2 ? .succeed : .fail
+        case (.const, .bound): return .fail
+        case (.bound, .const): return .fail
+        default: return nil
         }
-        
-        
+    }
+    
+    public static func firstOrderStrategy(_ up : UnificationParams, _ constraint : Constraint) -> Action? {
+        switch (constraint.lhs, constraint.rhs) {
+        case let (tm, .free(v, params: [])) where !tm.freeVars().contains(v):
+            guard let tm = tm.toZeroLevel(level: constraint.level) else { return .fail }
+            let twh = TmWithHoles(holes: 0, tm)
+            return .branch([], v, [twh])
+        case let (.free(v, params: []), tm) where !tm.freeVars().contains(v):
+            guard let tm = tm.toZeroLevel(level: constraint.level) else { return .fail }
+            let twh = TmWithHoles(holes: 0, tm)
+            return .branch([], v, [twh])
+        case let (.const, .free(v, params: [])) where constraint.lhs.occursForSure(v):
+            return .fail
+        case let (.free(v, params: []), .const) where constraint.rhs.occursForSure(v):
+            return .fail
+        default: return nil
+        }
+    }
+    
+    public static func patternStrategy(_ up : UnificationParams, _ constraint : Constraint) -> Action? {
+        func formsHigherOrderPattern(level : Int, params: [Tm]) -> Bool {
+            guard (params.allSatisfy { p in p.isBound(level: level) }) else { return false }
+            return Set(params).count == params.count
+        }
+        switch (constraint.lhs, constraint.rhs) {
+        case let (.free(v1, params: params1), .free(v2, params: params2)) where
+            formsHigherOrderPattern(level: constraint.level, params: params1) &&
+            formsHigherOrderPattern(level: constraint.level, params: params2):
+            if v1 == v2 {
+                guard params1.count == params2.count else { return .fail }
+                var deps : [Int] = []
+                for (i, p) in params1.enumerated() {
+                    if p == params2[i] {
+                        deps.append(i)
+                    }
+                }
+                let H = up.fresh(v1, deps.count)
+                let twh = TmWithHoles.hoPattern(holes: params1.count, deps: deps, fresh: H)
+                return .branch([], v1, [twh])
+            } else {
+                var bvars1 : Set<Int> = []
+                var bvars2 : Set<Int> = []
+                for p in params1 { bvars1.insert(p.boundIndex!) }
+                for p in params2 { bvars2.insert(p.boundIndex!) }
+                let bvars = Array(bvars1.intersection(bvars2))
+                let deps1 = bvars.map { v in params1.firstIndex { p in p.boundIndex! == v }! }
+                let deps2 = bvars.map { v in params2.firstIndex { p in p.boundIndex! == v }! }
+                let H = up.fresh(v1, bvars.count)
+                let twh1 = TmWithHoles.hoPattern(holes: params1.count, deps: deps1, fresh: H)
+                let twh2 = TmWithHoles.hoPattern(holes: params2.count, deps: deps2, fresh: H)
+                let subst = TmSubstitution(free: [v1 : twh1, v2 : twh2])
+                return Action(branches: [subst])
+            }
+        default: return nil
+        }
+    }
+
+    public static func rigidFreeStrategy(_ up : UnificationParams, _ constraint : Constraint) -> Action? {
         func couldMatch(pattern : Tm, const : Const) -> Bool {
             switch pattern {
             case .free: return true
@@ -229,186 +305,57 @@ public struct Unification {
             }
         }
         
-        func makeTasks(level : Int, params1 : [Tm], params2 : [Tm]) -> [Task] {
-            var tasks : [Task] = []
-            for (i, p1) in params1.enumerated() {
-                let p2 = params2[i]
-                tasks.append(Task(level: level, lhs: p1, rhs: p2))
-            }
-            return tasks
-        }
-        
-        func formsHigherOrderPattern(level : Int, params: [Tm]) -> Bool {
-            guard (params.allSatisfy { p in p.isBound(level: level) }) else { return false }
-            return Set(params).count == params.count
-        }
-        
-        func makeSubsts(_ v : Var, _ twhs : [TmWithHoles]) -> [TmSubstitution] {
-            return twhs.map { t in TmSubstitution(free: [v : t]) }
-        }
-        
-        func findOracleTopPrio(for task : Task) -> Oracle? {
-            guard !task.isTrivial else { return .trivial }
-            switch (task.lhs, task.rhs) {
-            case let (.bound(index1), .bound(index2)):
-                return index1 == index2 ? .trivial : .fails
-            case (.bound, .const): return .fails
-            case (.const, .bound): fatalError()
-            case (.free, .bound): fatalError()
-            case let (.bound(index), .free(v, params: params)) where index < task.level:
-                var twhs : [TmWithHoles] = []
-                for (i, p) in params.enumerated() {
-                    if couldMatch(pattern: p, bound: index) {
-                        twhs.append(TmWithHoles.projection(holes: params.count, i))
-                    }
-                }
-                return .branch([task], makeSubsts(v, twhs))
-            case let (.bound(index), .free(v, params: params)) where index >= task.level:
-                var twhs : [TmWithHoles] = []
-                twhs.append(TmWithHoles.constant(holes: params.count, index - task.level))
-                for (i, p) in params.enumerated() {
-                    if couldMatch(pattern: p, constBound: index) {
-                        twhs.append(TmWithHoles.projection(holes: params.count, i))
-                    }
-                }
-                return .branch([task], makeSubsts(v, twhs))
-            case let (.const(const1, binders1, params1), .const(const2, binders2, params2)):
-                if const1 != const2 || binders1.count != binders2.count || params1.count != params2.count {
-                    return .fails
-                } else {
-                    let sublevel = binders1.count + task.level
-                    return .tasks(makeTasks(level: sublevel, params1: params1, params2: params2))
-                }
-            case let (tm, .free(v, params: [])) where !tm.freeVars().contains(v):
-                guard let tm = tm.toZeroLevel(level: task.level) else { return .fails }
-                let twh = TmWithHoles(holes: 0, tm)
-                return .branch([], makeSubsts(v, [twh]))
-            case let (.free(v, params: []), tm) where !tm.freeVars().contains(v):
-                guard let tm = tm.toZeroLevel(level: task.level) else { return .fails }
-                let twh = TmWithHoles(holes: 0, tm)
-                return .branch([], makeSubsts(v, [twh]))
-            case let (.const, .free(v, params: [])) where task.lhs.occursForSure(v):
-                return .fails
-            case let (.free(v, params: []), .const) where task.rhs.occursForSure(v):
-                return .fails
-            case let (.free(v1, params: params1), .free(v2, params: params2)) where
-                formsHigherOrderPattern(level: task.level, params: params1) &&
-                formsHigherOrderPattern(level: task.level, params: params2):
-                if v1 == v2 {
-                    guard params1.count == params2.count else { return .fails }
-                    var deps : [Int] = []
-                    for (i, p) in params1.enumerated() {
-                        if p == params2[i] {
-                            deps.append(i)
-                        }
-                    }
-                    let H = frees.addFresh(v1, arity: deps.count)
-                    let twh = TmWithHoles.hoPattern(holes: params1.count, deps: deps, fresh: H)
-                    return .branch([], makeSubsts(v1, [twh]))
-                } else {
-                    var bvars1 : Set<Int> = []
-                    var bvars2 : Set<Int> = []
-                    for p in params1 { bvars1.insert(p.boundIndex!) }
-                    for p in params2 { bvars2.insert(p.boundIndex!) }
-                    let bvars = Array(bvars1.intersection(bvars2))
-                    let deps1 = bvars.map { v in params1.firstIndex { p in p.boundIndex! == v }! }
-                    let deps2 = bvars.map { v in params2.firstIndex { p in p.boundIndex! == v }! }
-                    let H = frees.addFresh(v1, arity: bvars.count)
-                    let twh1 = TmWithHoles.hoPattern(holes: params1.count, deps: deps1, fresh: H)
-                    let twh2 = TmWithHoles.hoPattern(holes: params2.count, deps: deps2, fresh: H)
-                    let subst = TmSubstitution(free: [v1 : twh1, v2 : twh2])
-                    return .branch([], [subst])
-                }
-            default: return nil
-            }
-        }
-        
-        func findOracleBottomPrio(for task : Task) -> Oracle? {
-            switch (task.lhs, task.rhs) {
-            case let (.const(c, _, params: _), .free(v, params: params)):
-                guard let head = kc.constants[c]?.head else { return .fails }
-                var twhs : [TmWithHoles] = []
-                let twh = TmWithHoles.constant(holes: params.count, head: head) { v, a in frees.addFresh(v, arity: a) }
-                twhs.append(twh)
-                for (i, p) in params.enumerated() {
-                    if couldMatch(pattern: p, const: c) {
-                        twhs.append(TmWithHoles.projection(holes: params.count, i))
-                    }
-                }
-                return .branch([task], makeSubsts(v, twhs))
-            default: return nil
-            }
-        }
-
-        
-        func nextOracle() -> Oracle? {
-            if let t = (job.nextTask { t in findOracleTopPrio(for: t) }) {
-                return t
-            } else {
-                if let t = (job.nextTask { t in findOracleBottomPrio(for: t) }) {
-                    return t
-                } else {
-                    return nil
+        switch (constraint.lhs, constraint.rhs) {
+        case let (.const(c, _, params: _), .free(v, params: params)):
+            guard let head = up.kernelContext.constants[c]?.head else { return .fail }
+            var twhs : [TmWithHoles] = []
+            let twh = TmWithHoles.constant(holes: params.count, head: head) { v, a in up.fresh(v, a) }
+            twhs.append(twh)
+            for (i, p) in params.enumerated() {
+                if couldMatch(pattern: p, const: c) {
+                    twhs.append(TmWithHoles.projection(holes: params.count, i))
                 }
             }
-        }
-        
-        func solveOracle(_ oracle : Oracle) -> Bool {
-            switch oracle {
-            case .trivial: return true
-            case .fails: return false
-            case let .tasks(tasks):
-                for task in tasks { job.addTask(task) }
-                return true
-            case let .branch(tasks, substs):
-                for task in tasks { job.addTask(task) }
-                return trySubstitutions(substs)
-            }
-        }
-                        
-        let fvs = freeVars.vars
-        
-        var sizeBound = 1
-        for l in lhs {
-            sizeBound += l.size
-        }
-        for r in rhs {
-            sizeBound += r.size
-        }
-        sizeBound *= 10
-
-        
-        jobLoop:
-        repeat {
-            while let oracle = nextOracle() {
-                guard job.getResult.size < sizeBound, solveOracle(oracle) else {
-                    guard !nextJobs.isEmpty else { return results }
-                    job = nextJobs.removeLast()
-                    //print("discarded job")
-                    continue jobLoop
+            return .branch([constraint], v, twhs)
+        case let (.bound(index), .free(v, params: params)) where index < constraint.level:
+            var twhs : [TmWithHoles] = []
+            for (i, p) in params.enumerated() {
+                if couldMatch(pattern: p, bound: index) {
+                    twhs.append(TmWithHoles.projection(holes: params.count, i))
                 }
-                //print("job has \(job.leftTasks.count) tasks, size is \(job.getResult.size)")
-                //print("\(job)")
             }
-            /*var r = job.getResult
-            r.restrict(fvs)*/
-            job.restrict(fvs)
-            results.append(job)
-            //print("found result no. \(results.count)")
-            guard !nextJobs.isEmpty else {
-                return results
+            return .branch([constraint], v, twhs)
+        case let (.bound(index), .free(v, params: params)) where index >= constraint.level:
+            var twhs : [TmWithHoles] = []
+            twhs.append(TmWithHoles.constant(holes: params.count, index - constraint.level))
+            for (i, p) in params.enumerated() {
+                if couldMatch(pattern: p, constBound: index) {
+                    twhs.append(TmWithHoles.projection(holes: params.count, i))
+                }
             }
-            job = nextJobs.removeLast()
-        } while true
-    }
-    
-    public func unify(lhs : [Tm], rhs : [Tm]) -> [Job] {
-        var frees = FreeVars()
-        return unify(lhs: lhs, rhs: rhs, frees: &frees)
+            return .branch([constraint], v, twhs)
+        default: return nil
+        }
     }
 
-    public func unify(lhs : Tm, rhs : Tm) -> [Job] {
-        return unify(lhs: [lhs], rhs: [rhs])
+    public static func freeRigidStrategy(_ up : UnificationParams, _ constraint : Constraint) -> Action? {
+        return rigidFreeStrategy(up, constraint.reversed)
     }
-        
+
+    public static func freeFreeStrategy(_ up : UnificationParams, _ constraint : Constraint) -> Action? {
+        switch (constraint.lhs, constraint.rhs) {
+        default: return nil
+        }
+    }
+
+    public static let strategies : [Strategy] = [
+        trivialStrategy,
+        rigidRigidStrategy,
+        firstOrderStrategy,
+        patternStrategy,
+        rigidFreeStrategy,
+        freeRigidStrategy,
+        freeFreeStrategy
+    ]
+
 }

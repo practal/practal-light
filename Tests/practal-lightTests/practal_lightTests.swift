@@ -424,14 +424,13 @@
                 let tm1 = context.parseAsTm(e1)!
                 let tm2 = context.parseAsTm(e2)!
                 print("trying to unify '\(tm1)' and '\(tm2)'")
-                let u = Unification(kc: context.kernel)
-                let jobs = u.unify(lhs: tm1, rhs: tm2)
+                //let u = UnificationOld(kc: context.kernel)
+                //let jobs = u.unify(lhs: tm1, rhs: tm2)
+                let jobs = Unification.unify(kernelContext: context.kernel, lhs: tm1, rhs: tm2)
                 for job in jobs {
                     print("---------------")
                     print(job.description)
                 }
-                print("---------------")
-                print("found \(jobs.count) resulting jobs")
             }
             unify("a", "a")
             unify("a", "b")
@@ -442,6 +441,7 @@
             unify("X[f a]", "f Y[a]")
             unify("G", "f G")
             unify("F[G[a]]", "F[b]")
+            unify("∀ x. P[x]", "∀ y. Q[y]")
             print("================================")
         }
     }
