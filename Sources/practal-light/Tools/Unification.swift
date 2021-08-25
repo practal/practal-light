@@ -70,7 +70,7 @@ public struct Unification {
     
     public typealias Fresh = (Var, Int) -> Var
     
-    public typealias Strategy = (UnificationParams, Constraint) -> Action?
+    public typealias Strategy = (UnificationParams, Leaf, Constraint) -> [Action]
     
     public struct Leaf : CustomStringConvertible {
         
@@ -78,9 +78,9 @@ public struct Unification {
         
         private let constraints : [Constraint]
         
-        private let elimVars : Set<Var>
+        let elimVars : Set<Var>
         
-        private let idVars : Set<Var>
+        let idVars : Set<Var>
         
         
         init(constraints : [Constraint]) {
@@ -126,16 +126,23 @@ public struct Unification {
         
         func process(_ up : UnificationParams, _ strategy : Strategy) -> [Leaf]? {
             for (i, c) in constraints.enumerated() {
-                guard let action = strategy(up, c) else { continue }
+                let actions = strategy(up, self, c)
+                if actions.isEmpty { continue }
+                var newLeafs : [Leaf] = []
                 var cs = constraints
                 cs.remove(at: i)
-                cs.append(contentsOf: action.addConstraints)
-                let newLeaf = Leaf(substitution, cs, elimVars.union(action.addElimVars), idVars.union(action.addIdVars))
-                guard let branches = action.branches else { return [newLeaf] }
-                var newLeafs : [Leaf] = []
-                for subst in branches {
-                    guard let l = newLeaf.substitute(subst) else { continue }
-                    newLeafs.append(l)
+                for action in actions {
+                    var ds = cs
+                    ds.append(contentsOf: action.addConstraints)
+                    let newLeaf = Leaf(substitution, ds, elimVars.union(action.addElimVars), idVars.union(action.addIdVars))
+                    guard let branches = action.branches else {
+                        newLeafs.append(newLeaf)
+                        continue
+                    }
+                    for subst in branches {
+                        guard let l = newLeaf.substitute(subst) else { continue }
+                        newLeafs.append(l)
+                    }
                 }
                 return newLeafs
             }
@@ -284,7 +291,7 @@ public struct Unification {
         }
     }
 
-    public static func rigidFreeStrategy(_ up : UnificationParams, _ constraint : Constraint) -> Action? {
+    public static func rigidFreeStrategy(_ up : UnificationParams, _ leaf : Leaf, _ constraint : Constraint) -> [Action] {
         func couldMatch(pattern : Tm, const : Const) -> Bool {
             switch pattern {
             case .free: return true
@@ -307,52 +314,135 @@ public struct Unification {
         
         switch (constraint.lhs, constraint.rhs) {
         case let (.const(c, _, params: _), .free(v, params: params)):
-            guard let head = up.kernelContext.constants[c]?.head else { return .fail }
+            guard let head = up.kernelContext.constants[c]?.head else { return [] }
             var twhs : [TmWithHoles] = []
             let twh = TmWithHoles.constant(holes: params.count, head: head) { v, a in up.fresh(v, a) }
             twhs.append(twh)
-            for (i, p) in params.enumerated() {
-                if couldMatch(pattern: p, const: c) {
-                    twhs.append(TmWithHoles.projection(holes: params.count, i))
+            if !leaf.idVars.contains(v) {
+                for (i, p) in params.enumerated() {
+                    if couldMatch(pattern: p, const: c) {
+                        twhs.append(TmWithHoles.projection(holes: params.count, i))
+                    }
                 }
             }
-            return .branch([constraint], v, twhs)
+            return [.branch([constraint], v, twhs)]
         case let (.bound(index), .free(v, params: params)) where index < constraint.level:
             var twhs : [TmWithHoles] = []
-            for (i, p) in params.enumerated() {
-                if couldMatch(pattern: p, bound: index) {
-                    twhs.append(TmWithHoles.projection(holes: params.count, i))
+            if !leaf.idVars.contains(v) {
+                for (i, p) in params.enumerated() {
+                    if couldMatch(pattern: p, bound: index) {
+                        twhs.append(TmWithHoles.projection(holes: params.count, i))
+                    }
                 }
             }
-            return .branch([constraint], v, twhs)
+            return [.branch([constraint], v, twhs)]
         case let (.bound(index), .free(v, params: params)) where index >= constraint.level:
             var twhs : [TmWithHoles] = []
             twhs.append(TmWithHoles.constant(holes: params.count, index - constraint.level))
-            for (i, p) in params.enumerated() {
-                if couldMatch(pattern: p, constBound: index) {
-                    twhs.append(TmWithHoles.projection(holes: params.count, i))
+            if !leaf.idVars.contains(v) {
+                for (i, p) in params.enumerated() {
+                    if couldMatch(pattern: p, constBound: index) {
+                        twhs.append(TmWithHoles.projection(holes: params.count, i))
+                    }
                 }
             }
-            return .branch([constraint], v, twhs)
-        default: return nil
+            return [.branch([constraint], v, twhs)]
+        default: return []
         }
     }
 
-    public static func freeRigidStrategy(_ up : UnificationParams, _ constraint : Constraint) -> Action? {
-        return rigidFreeStrategy(up, constraint.reversed)
+    public static func freeRigidStrategy(_ up : UnificationParams, _ leaf : Leaf, _ constraint : Constraint) -> [Action] {
+        return rigidFreeStrategy(up, leaf, constraint.reversed)
     }
-
-    public static func freeFreeStrategy(_ up : UnificationParams, _ constraint : Constraint) -> Action? {
+    
+    private static func choose(from : Int, act : ([Int]) -> Void) {
+        func makeChoices(chosen : [Int], position : Int) {
+            if position < from {
+                makeChoices(chosen: chosen, position : position + 1)
+                makeChoices(chosen: chosen + [position], position: position + 1)
+            } else {
+                act(chosen)
+            }
+        }
+        makeChoices(chosen : [], position : 0)
+    }
+    
+    private static func eliminations(F : Var, arity : Int, fresh : Fresh) -> [(Var, TmWithHoles)] {
+        var tms : [(Var, TmWithHoles)] = []
+        var primes = 0
+        let id = F.name.id
+        choose(from: arity) { chosen in
+            let a = chosen.count
+            guard a < arity else { return }
+            let G = fresh(Var(name: Id("elim-\(id)")!, primes: primes), a)
+            primes += 1
+            let tm = TmWithHoles.elimination(holes: arity, G, chosen)
+            tms.append((G, tm))
+        }
+        return tms
+    }
+    
+    private static func projections(_ leaf : Leaf, _ constraint : Constraint, _ v : Var, arity : Int) -> Action? {
+        guard arity > 0 && !leaf.idVars.contains(v) else { return nil }
+        var tms : [TmWithHoles] = []
+        for k in 0 ..< arity {
+            tms.append(TmWithHoles.projection(holes: arity, k))
+        }
+        return .branch([constraint], v, tms)
+    }
+    
+    public static func freeFreeStrategy(_ up : UnificationParams, _ leaf : Leaf, _ constraint : Constraint) -> [Action] {
         switch (constraint.lhs, constraint.rhs) {
-        default: return nil
+        case let (.free(v1, params1), .free(v2, params2)) where v1 == v2:
+            guard params1.count == params2.count else { return [] }
+            var actions : [Action] = []
+            var decomposed : [Constraint] = []
+            for (i, p1) in params1.enumerated() {
+                let p2 = params2[i]
+                let c = Constraint(level: constraint.level, lhs: p1, rhs: p2)
+                decomposed.append(c)
+            }
+            actions.append(Action(addConstraints: decomposed))
+            guard !leaf.elimVars.contains(v1) else { return actions }
+            let elims = eliminations(F: v1, arity: params1.count, fresh: up.fresh)
+            for (G, twh) in elims {
+                let subst = TmSubstitution(free: [v1 : twh])
+                let action = Action(addConstraints: [constraint], addElimVars: [G], branches: [subst])
+                actions.append(action)
+            }
+            return actions
+        case let (.free(F, params1), .free(G, params2)) where F != G:
+            let arity = params1.count + params2.count
+            let H = up.fresh(Var(name: Id("id-\(F.name.id)-\(G.name.id)")!), arity)
+            let Fid = TmWithHoles.identify(holes: params1.count, F: F, H: H, arity: arity, fresh: up.fresh)
+            let Gid = TmWithHoles.identify(holes: params2.count, G: G, H: H, arity: arity, fresh: up.fresh)
+            let subst = TmSubstitution(free : [F : Fid, G : Gid])
+            let identifyAction = Action(addConstraints: [constraint], addIdVars: [H], branches: [subst])
+            var actions = [identifyAction]
+            if let action = projections(leaf, constraint, F, arity: params1.count) {
+                actions.append(action)
+            }
+            if let action = projections(leaf, constraint, G, arity: params2.count) {
+                actions.append(action)
+            }
+            return actions
+        default: return []
         }
+    }
+    
+    private static func conv(_ strategy : @escaping (UnificationParams, Constraint) -> Action?) -> Strategy {
+        func s(up : UnificationParams, l : Leaf, c : Constraint) -> [Action] {
+            guard let action = strategy(up, c) else { return [] }
+            return [action]
+        }
+        return s
     }
 
     public static let strategies : [Strategy] = [
-        trivialStrategy,
-        rigidRigidStrategy,
-        firstOrderStrategy,
-        patternStrategy,
+        conv(trivialStrategy),
+        conv(rigidRigidStrategy),
+        conv(firstOrderStrategy),
+        //conv(patternStrategy),
         rigidFreeStrategy,
         freeRigidStrategy,
         freeFreeStrategy

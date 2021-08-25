@@ -72,59 +72,6 @@ public struct TmWithHoles : CustomStringConvertible {
         return subst.apply(level: 0, tm)
     }
     
-    public static func projection(holes : Int, _ k : Int) -> TmWithHoles {
-        return TmWithHoles(holes: holes, .bound(k))
-    }
-    
-    public static func constant(holes : Int, _ bound : Int) -> TmWithHoles {
-        return TmWithHoles(holes: holes, .bound(bound + holes))
-    }
-    
-    public static func constant(holes : Int, head : Head, fresh : (Var, Int) -> Var) -> TmWithHoles {
-        var params : [Tm] = []
-        let binders = head.binders
-        let level = binders.count
-        let holeArgs = (level ..< level + holes).map { i in Tm.bound(i)}
-        for (i, p) in head.params.enumerated() {
-            let selected = head.selectBoundVars(param: i, binders: binders)
-            let args : [Tm] = selected.map { b in Tm.bound(head.binderIndex(b)!) }
-            let ps = args + holeArgs
-            let F = Tm.free(fresh(p.var!, ps.count), params: ps)
-            params.append(F)
-        }
-        let tm = Tm.const(head.const, binders: binders, params: params)
-        return TmWithHoles(holes: holes, tm)
-    }
-    
-    public static func variable(holes : Int, `var` v: Var, numargs : Int, fresh : (Var, Int) -> Var) -> TmWithHoles {
-        var params : [Tm] = []
-        let holeArgs = (0 ..< holes).map { i in Tm.bound(i)}
-        for k in 0 ..< numargs {
-            let name = "\(v.name.id)-arg-\(k)"
-            let v = fresh(Var(name)!, holeArgs.count)
-            let p = Tm.free(v, params: holeArgs)
-            params.append(p)
-        }
-        let tm = Tm.free(v, params: params)
-        return TmWithHoles(holes: holes, tm)
-    }
-    
-    private static func mkBoundsParams(_ bounds : Set<Int>) -> [Tm] {
-        var bounds = Array(bounds)
-        bounds.sort()
-        var tms : [Tm] = []
-        for b in bounds {
-            tms.append(.bound(b))
-        }
-        return tms
-    }
-    
-    public static func hoPattern(holes : Int, deps : [Int], fresh : Var) -> TmWithHoles {
-        let params = deps.map { d in Tm.bound(d) }
-        let tm = Tm.free(fresh, params: params)
-        return TmWithHoles(holes: holes, tm)
-    }
-
     public var description : String {
         return "([\(holes)] \(tm))"
     }
