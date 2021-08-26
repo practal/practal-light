@@ -161,7 +161,11 @@ public struct TmSubstitution {
     public mutating func restrict(_ vars : Set<Var>) {
         free = free.filter { (v, _) in vars.contains(v) }
     }
+        
+    public var freeMappings : [Var : TmWithHoles] { return free }
     
+    public var boundMappings : [Int : TmWithHoles] { return bound }
+        
     public subscript(_ index : Int) -> TmWithHoles? {
         get {
             return bound[index]

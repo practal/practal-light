@@ -149,10 +149,8 @@ public struct Unification {
             return nil
         }
         
-        func finish(_ domain : Set<Var>) -> Leaf {
-            var s = substitution
-            s.restrict(domain)
-            return Leaf(s, constraints, elimVars, idVars)
+        func norm(_ arities : [Var : Int]) -> Leaf {
+            return Leaf(normalizeSubst(arities, substitution), constraints, elimVars, idVars)
         }
         
     }
@@ -160,7 +158,6 @@ public struct Unification {
     public struct UnificationParams {
         public let kernelContext : KernelContext
         public let fresh : Fresh
-        public let domain : Set<Var>
         public let sizeLimit : Int
     }
         
@@ -182,7 +179,7 @@ public struct Unification {
                         }
                     }
                 }
-                finished.append(leaf.finish(up.domain))
+                finished.append(leaf)
             }
             leafs = newLeafs
         }
@@ -204,11 +201,16 @@ public struct Unification {
             return frees.addFresh(v, arity: arity)
         }
         
-        let up = UnificationParams(kernelContext: kernelContext, fresh: fresh, domain: freeVars.vars, sizeLimit: sizeLimit)
+        let arities = frees.arities
+        
+        let up = UnificationParams(kernelContext: kernelContext, fresh: fresh, sizeLimit: sizeLimit)
         
         let constraint = Constraint(level: 0, lhs: lhs, rhs: rhs)
         
-        return unify(up, constraints: [constraint], strategies: strategies)
+        let leafs = unify(up, constraints: [constraint], strategies: strategies)
+        
+        return leafs.map { l in l.norm(arities) }
+        
     }
 
     public static func trivialStrategy(_ up : UnificationParams, _ constraint : Constraint) -> Action? {
@@ -436,6 +438,74 @@ public struct Unification {
             return [action]
         }
         return s
+    }
+    
+    private static let VARLETTERS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T","U", "V", "W", "X", "Y", "Z"]
+    
+    private static func index2var(_ index : Int) -> Var {
+        var s = ""
+        var index = index
+        let base = VARLETTERS.count
+        while index >= base {
+            let m = index % base
+            s.append(VARLETTERS[m])
+            index /= base
+        }
+        s.append(VARLETTERS[index])
+        return Var(name: Id(s)!)
+    }
+        
+    private static func normalizeSubst(_ arities : [Var : Int], _ subst : TmSubstitution) -> TmSubstitution {
+        guard subst.boundMappings.isEmpty else { fatalError() }
+        var freeMappings = subst.freeMappings
+        for (v, arity) in arities {
+            if freeMappings[v] == nil {
+                freeMappings[v] = TmWithHoles.variable(v, arity : arity)
+            }
+        }
+        var freeSubst = freeMappings.sorted { e1, e2 in
+            e1.key < e2.key
+        }
+        freeSubst.removeAll { e in arities[e.key] == nil }
+        //return TmSubstitution(free: Dictionary(uniqueKeysWithValues: freeSubst))
+        var vindex = 0
+        var renaming : [Var : Var] = [:]
+        
+        func fresh() -> Var {
+            while true {
+                let v = index2var(vindex)
+                vindex += 1
+                guard arities[v] == nil else {
+                    continue
+                }
+                return v
+            }
+        }
+        
+        func norm(_ tm : Tm) -> Tm {
+            switch tm {
+            case let .free(v, params: params):
+                let w : Var
+                if arities[v] != nil {
+                    w = v
+                } else if let r = renaming[v] {
+                    w = r
+                } else {
+                    w = fresh()
+                    renaming[v] = w
+                }
+                return .free(w, params: params.map(norm))
+            case .bound: return tm
+            case let .const(c, binders: binders, params: params):
+                return .const(c, binders: binders, params: params.map(norm))
+            }
+        }
+        
+        var normedFree : [Var : TmWithHoles] = [:]
+        for (v, tmwh) in freeSubst {
+            normedFree[v] = TmWithHoles(holes: tmwh.holes, norm(tmwh.tm))
+        }
+        return TmSubstitution(free: normedFree)
     }
 
     public static let strategies : [Strategy] = [

@@ -44,6 +44,11 @@ extension TmWithHoles {
         let tm = Tm.free(v, params: params)
         return TmWithHoles(holes: holes, tm)
     }
+    
+    public static func variable(_ v : Var, arity : Int) -> TmWithHoles {
+        let bounds = (0 ..< arity).map { i in Tm.bound(i) }
+        return TmWithHoles(holes: arity, .free(v, params: bounds))
+    }
         
     public static func hoPattern(holes : Int, deps : [Int], fresh : Var) -> TmWithHoles {
         let params = deps.map { d in Tm.bound(d) }
