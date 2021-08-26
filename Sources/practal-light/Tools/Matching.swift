@@ -59,14 +59,14 @@ public struct Matching {
         
     public let kc : KernelContext
     
-    public func match(patterns : [Tm], instances : [Tm], max_matches : Int, frees : inout FreeVars) -> [TmSubstitution] {
+    public func match(patterns : [TmWithHoles], instances : [TmWithHoles], max_matches : Int, frees : inout FreeVars) -> [TmSubstitution] {
         guard patterns.count == instances.count else { fatalError() }
         
         var _patternFreeVars = FreeVars()
         
         for p in patterns {
-            guard frees.add(p) else { return [] }
-            _patternFreeVars.add(p)
+            guard frees.add(p.tm) else { return [] }
+            _patternFreeVars.add(p.tm)
         }
         
         let patternFreeVars = _patternFreeVars.vars
@@ -80,7 +80,9 @@ public struct Matching {
 
         var job = Job(result: TmSubstitution(), tasks: [])
         for (i, p) in patterns.enumerated() {
-            job.addTask(Task(level: 0, pattern: p, instance: instances[i]))
+            let q = instances[i]
+            guard q.holes == p.holes else { return [] }
+            job.addTask(Task(level: q.holes, pattern: p.tm, instance: q.tm))
             //print("*** \(p)  ==>  \(instances[i])")
         }
                 
@@ -222,6 +224,8 @@ public struct Matching {
     
     public func match(patterns : [Tm], instances : [Tm], max_matches : Int = Int.max) -> [TmSubstitution] {
         var frees = FreeVars()
+        let patterns = patterns.map { p in TmWithHoles(holes: 0, p) }
+        let instances = instances.map { i in TmWithHoles(holes: 0, i) }
         return match(patterns: patterns, instances: instances, max_matches: max_matches, frees: &frees)
     }
 
@@ -246,6 +250,27 @@ extension Matching {
             return (axiom: i, thm: sth)
         }
         return nil
+    }
+    
+    // Finds a substitution delta such that subsumed <= delta ∘ subsumed
+    public func subsumption(subsuming : TmSubstitution, subsumed : TmSubstitution) -> TmSubstitution? {
+        var patterns : [TmWithHoles] = []
+        var instances : [TmWithHoles] = []
+        
+        for (v, i) in subsumed.freeMappings {
+            if let p = subsuming[v] {
+                patterns.append(p)
+                instances.append(i)
+            } else {
+                let p = TmWithHoles.variable(v, arity: 0)
+                patterns.append(p)
+                instances.append(i)
+            }
+        }
+        
+        var frees = FreeVars()
+        let solutions = match(patterns: patterns, instances: instances, max_matches: 1, frees: &frees)
+        return solutions.first
     }
     
 }

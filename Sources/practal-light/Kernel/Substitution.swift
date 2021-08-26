@@ -128,7 +128,7 @@ public struct TmVarRenaming {
         
 }
 
-public struct TmSubstitution {
+public struct TmSubstitution : CustomStringConvertible {
     
     private var free : [Var : TmWithHoles]
     private var bound : [Int : TmWithHoles]
@@ -145,6 +145,17 @@ public struct TmSubstitution {
             guard let twh = TmWithHoles(kc, wellformed: t) else { return nil }
             free[v] = twh
         }
+    }
+    
+    public var description : String {
+        var mappings : [(String, String)] = []
+        for (v, t) in (free.sorted { e1, e2 in e1.key < e2.key }) {
+            mappings.append((v.description, t.description))
+        }
+        for (i, t) in (bound.sorted { e1, e2 in e1.key < e2.key }) {
+            mappings.append((i.description, t.description))
+        }
+        return "[\(mappings.map { m in "\(m.0) → \(m.1)"} .joined(separator: ", "))]"
     }
     
     public var size : Int {

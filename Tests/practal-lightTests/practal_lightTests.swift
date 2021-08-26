@@ -350,7 +350,7 @@
             axiom("(⊤ ⟶ nil) = ⊥")
         }*/
         
-        func testContext() {
+        /*func testContext() {
             let context = Context.root()
             print(context.kernel.description)
 
@@ -368,7 +368,7 @@
             show("r ∧ d ⟶ a ∧ t ∧ x ⟶ i ∧ j")
             show("∀ x. ∃ y. x = y")
 
-        }
+        }*/
         
         func testMatching() {
             let context = Context.root()
@@ -424,15 +424,27 @@
                 let tm1 = context.parseAsTm(e1)!
                 let tm2 = context.parseAsTm(e2)!
                 print("trying to unify '\(tm1)' and '\(tm2)'")
-                let jobs = Unification.unify(kernelContext: context.kernel, lhs: tm1, rhs: tm2)
-                if jobs.isEmpty {
-                    print("---------------")
-                    print("unification is impossible")
-                } else {
-                    for job in jobs {
+                if let result = Unification.unify(kernelContext: context.kernel, lhs: tm1, rhs: tm2) {
+                    if result.unsolved.isEmpty && result.solved.isEmpty {
                         print("---------------")
-                        print(job.description)
+                        print("unification is impossible")
+                    } else {
+                        if !result.unsolved.isEmpty {
+                            print("---------------")
+                            print("there are \(result.unsolved.count) unsolved cases:")
+                            for leaf in result.unsolved {
+                                print("  --- \(leaf)")
+                            }
+                        }
+                        print("---------------")
+                        print("there are \(result.solved.count) solutions:")
+                        for solution in result.solved {
+                            print("  --- \(solution)")
+                        }
                     }
+                } else {
+                    print("---------------")
+                    print("unification failed")
                 }
             }
             unify("a", "a")

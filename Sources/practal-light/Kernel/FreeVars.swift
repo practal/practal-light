@@ -126,6 +126,7 @@ public struct FreeVars {
         return (fresh: fresh, renaming: renaming)
     }
 
+    
     public mutating func addFresh(_ tms : [Tm]) -> (freshs: [Tm], renaming: TmVarRenaming)? {
         var renaming = TmVarRenaming()
         var freshs : [Tm] = []
@@ -137,5 +138,18 @@ public struct FreeVars {
         }
         return (freshs: freshs, renaming: renaming)
     }
+
+    public mutating func addFresh(_ tms : [TmWithHoles]) -> (freshs: [TmWithHoles], renaming: TmVarRenaming)? {
+        var renaming = TmVarRenaming()
+        var freshs : [TmWithHoles] = []
+        for tm in tms {
+            guard let fresh = addFresh(tm.tm, renaming: &renaming) else {
+                return nil
+            }
+            freshs.append(TmWithHoles(holes: tm.holes, fresh))
+        }
+        return (freshs: freshs, renaming: renaming)
+    }
+
 
 }

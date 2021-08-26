@@ -114,14 +114,24 @@ public struct Unification {
                 return "Solved: \(substitution)"
             }
             var d = "Unsolved (\(constraints.count) constraints left): \(substitution)\n"
+            var i = 0
             for c in constraints {
-                d.append("  --- \(c)\n")
+                i += 1
+                d.append("  \(i)) \(c)\n")
             }
             return d
         }
         
         var solved: Bool {
             return constraints.isEmpty
+        }
+        
+        var result: TmSubstitution? {
+            if solved {
+                return substitution
+            } else {
+                return nil
+            }
         }
         
         func process(_ up : UnificationParams, _ strategy : Strategy) -> [Leaf]? {
@@ -161,7 +171,7 @@ public struct Unification {
         public let sizeLimit : Int
     }
         
-    public static func unify(_ up : UnificationParams, constraints : [Constraint], strategies : [Strategy]) -> [Leaf] {
+    private static func unifyRaw(_ up : UnificationParams, constraints : [Constraint], strategies : [Strategy]) -> [Leaf] {
         var leafs : [Leaf] = [Leaf(constraints: constraints)]
         var changed = true
         var finished : [Leaf] = []
@@ -186,14 +196,14 @@ public struct Unification {
         return finished
     }
     
-    public static func unify(kernelContext : KernelContext, lhs : Tm, rhs : Tm) -> [Leaf] {
+    public static func unify(kernelContext : KernelContext, lhs : Tm, rhs : Tm) -> (solved: [TmSubstitution], unsolved: [Leaf])? {
         let sizeLimit = (lhs.size + rhs.size + 1) * 10
         
         var freeVars = FreeVars()
         var frees = FreeVars()
         
         for t in [lhs, rhs] {
-            guard frees.add(t) else { return [] }
+            guard frees.add(t) else { return nil }
             freeVars.add(t)
         }
         
@@ -207,12 +217,60 @@ public struct Unification {
         
         let constraint = Constraint(level: 0, lhs: lhs, rhs: rhs)
         
-        let leafs = unify(up, constraints: [constraint], strategies: strategies)
+        let leafs = unifyRaw(up, constraints: [constraint], strategies: strategies)
         
-        return leafs.map { l in l.norm(arities) }
-        
+        return simplifyLeafs(kernelContext: kernelContext, arities: arities, leafs: leafs)
     }
-
+    
+    private static func simplifyLeafs(kernelContext : KernelContext, arities : [Var : Int], leafs : [Leaf]) -> (solved: [TmSubstitution], unsolved: [Leaf]) {
+        var unsolved : [Leaf] = []
+        var solved : [TmSubstitution] = []
+        let domain = Set(arities.keys)
+        for leaf in leafs {
+            if var result = leaf.result {
+                result.restrict(domain)
+                solved.append(result)
+            } else {
+                unsolved.append(leaf)
+            }
+        }
+        let matching = Matching(kc: kernelContext)
+        func simplify(_ substs : [TmSubstitution]) -> [TmSubstitution] {
+            guard let subst = substs.first else { return [] }
+            let simplified = simplify(Array(substs.dropFirst()))
+            var filtered : [TmSubstitution] = []
+            var skip = false
+            for s in simplified {
+                guard !skip else {
+                    filtered.append(s)
+                    continue
+                }
+                let s_subsumes_subst = matching.subsumption(subsuming: s, subsumed: subst) != nil
+                let subst_subsumes_s = matching.subsumption(subsuming: subst, subsumed: s) != nil
+                if s_subsumes_subst && subst_subsumes_s {
+                    if s.size <= subst.size {
+                        filtered.append(s)
+                    } else {
+                        filtered.append(subst)
+                    }
+                    skip = true
+                } else if s_subsumes_subst {
+                    filtered.append(s)
+                    skip = true
+                } else if subst_subsumes_s {
+                    // do nothing, i.e. s is filtered out
+                } else {
+                    filtered.append(s)
+                }
+            }
+            if !skip {
+                filtered.append(subst)
+            }
+            return filtered
+        }
+        return (solved: simplify(solved), unsolved: unsolved)
+    }
+    
     public static func trivialStrategy(_ up : UnificationParams, _ constraint : Constraint) -> Action? {
         return constraint.isTrivial ? .succeed : nil
     }
