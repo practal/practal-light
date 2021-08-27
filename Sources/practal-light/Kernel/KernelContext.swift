@@ -152,13 +152,15 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         return extend([.define(const: const, hyps: hyps, body: body)], addAxioms: [ax], mergeConstants: [const: def])
     }
         
-    public func choose(const : Const, where cond: Term, prover : Prover) -> KernelContext? {
+    public func choose(const : Const, from: Theorem) -> KernelContext? {
+        guard isValid(from) else { return nil }
         guard constants[const] == nil else { return nil }
-        let fresh = Term.fresh(const.name, for: cond)
-        let replaced = Term.replace(const: const, with: fresh, in: cond)
-        let exists = Term.mk_ex(fresh, replaced)
-        guard let frees = checkWellformedness(exists)?.arity, frees.isEmpty else { return nil }
-        guard prove(prover, exists) else { return nil }
+        guard let (v, body) = Term.dest_ex(from.prop) else { return nil }
+        let cond = Term.replace(kc: self, free: v, with: const, in: body)
+        guard let frees = checkWellformedness(cond)?.arity, frees.isEmpty else {
+            print("choose: free variables discovered")
+            return nil
+        }
         let head = Head(const: const, binders: [], params: [])!
         let def = Def(head: head, definitions: [], sealed: true)
         return extend([.choose(const, where: cond)], addAxioms: [cond], mergeConstants: [const : def])

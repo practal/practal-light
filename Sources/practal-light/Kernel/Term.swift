@@ -134,6 +134,31 @@ public extension Term {
         return repl(term)
     }
     
+    static func replace(kc : KernelContext, free : Var, with const : Const, in term : Term) -> Term {
+        func repl(_ term : Term) -> Term {
+            switch term {
+            case let .variable(v, params: []) where v == free:
+                return .constant(const, binders: [], params: [])
+            case let .variable(v, params: params):
+                guard v != free else { fatalError() }
+                return .variable(v, params: params.map(repl))
+            case let .constant(c, binders: binders, params: params):
+                guard let head = kc.constants[c]?.head else { fatalError() }
+                var replaced : [Term] = []
+                for (i, p) in params.enumerated() {
+                    if head.depends(param: i, on: free) {
+                        replaced.append(p)
+                    } else {
+                        replaced.append(repl(p))
+                    }
+                }
+                return .constant(c, binders: binders, params: replaced)
+            }
+        }
+        
+        return repl(term)
+    }
+    
     func arityOf(const : Const) -> (binders: Int, params: Int)? {
         switch self {
         case let .constant(c, binders: binders, params: params):
@@ -229,6 +254,15 @@ public extension Term {
     static func dest_all(_ term : Term) -> (Var, Term)? {
         switch term {
         case let .constant(Const.c_all, binders: binders, params: params):
+            guard let x = binders.first, let body = params.first else { return nil }
+            return (x, body)
+        default: return nil
+        }
+    }
+
+    static func dest_ex(_ term : Term) -> (Var, Term)? {
+        switch term {
+        case let .constant(Const.c_ex, binders: binders, params: params):
             guard let x = binders.first, let body = params.first else { return nil }
             return (x, body)
         default: return nil

@@ -148,8 +148,8 @@ extension Context {
 
     public func choose(_ name : String, from: Theorem) -> Theorem? {
         let const = Const("local.\(name)")!
-        guard let w = instantiate(binding: from.prop, instance: .constant(const, binders: [], params: []), const: .c_ex) else { return nil }
-        guard choose(const: const, where: w, prover: Prover.debug(Prover.fail)) else { return nil }
+        //guard let w = instantiate(binding: from.prop, instance: .constant(const, binders: [], params: []), const: .c_ex) else { return nil }
+        guard choose(const: const, from: from) else { return nil }
         return kernel.lastAxiom
     }
 

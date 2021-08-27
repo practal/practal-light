@@ -101,6 +101,20 @@ public struct Head : Hashable, CustomStringConvertible {
         return vars
     }
     
+    public func depends(param : Int, on : Var) -> Bool {
+        switch params[param] {
+        case let .variable(_, params: params):
+            for p in params {
+                guard let d = p.unappliedVar else {
+                    fatalError()
+                }
+                if d == on { return true }
+            }
+            return false
+        case .constant: fatalError()
+        }
+    }
+    
     public func accessible(param : Int) -> [Bool] {
         let vars = selectBoundVars(param: param, binders: binders)
         var acc = [Bool](repeating: false, count: binders.count)

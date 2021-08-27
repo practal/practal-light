@@ -472,8 +472,7 @@
             let t = c.allElim(a, x)!
             //c.kernel.ch
             print("t = \(t)")
-            let th = c.choose("d", from: t)!
-            print("th = \(th)")
-            
+            let th = c.choose("d", from: t)
+            XCTAssertNil(th) // it's not, because cannot choose from theorems containing free variables
         }
     }
