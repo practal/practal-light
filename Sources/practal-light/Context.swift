@@ -244,7 +244,15 @@ extension Context {
     public func axiom(_ prop : String) {
         guard assume(prop) != nil else { fatalError() }
     }
-
+    
+    public func choose(const : Const, where cond: Term, prover : ContextProver) -> Bool {
+        return extend { context in
+            return context.kernel.choose(const: const, where: cond) { kc, prop in
+                return prover.prove(context, prop)
+            }
+        }
+    }
+    
 }
 
 extension Context {

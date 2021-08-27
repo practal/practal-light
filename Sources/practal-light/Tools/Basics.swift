@@ -116,5 +116,41 @@ extension Context {
         guard let a = apply(eq, to: eq_subst).first else { return nil }
         return apply(right, to: a).first
     }
+    
+    
+    public func instantiate(binding : Term, instances _instances: [Term]) -> (const: Const, params: [Term])? {
+        guard let binding = kernel.tmOf(binding) else { return nil }
+        let instances = _instances.compactMap { t in kernel.tmOf(t) }
+        guard instances.count == _instances.count else { return nil }
+        switch binding {
+        case let .const(c, binders: binders, params: params) where binders.count == _instances.count:
+            let keyValues = (0 ..< instances.count).map { i in (i, TmWithHoles(holes: 0, instances[i])) }
+            let dict = Dictionary(uniqueKeysWithValues: keyValues)
+            let subst = TmSubstitution(bound: dict)
+            guard let params = subst.apply(params) else { return nil }
+            return (const: c, params: params.map { p in p.term()! })
+        default: return nil
+        }
+    }
+    
+    public func instantiate(binding : Term, instance : Term, const : Const) -> Term? {
+        guard let (c, params) = instantiate(binding: binding, instances: [instance]) else { return nil }
+        guard c == const && params.count == 1 else { return nil }
+        return params.first!
+    }
+    
+    public func allElim(_ all : Theorem, _ t : Term) -> Theorem? {
+        guard let goal = instantiate(binding: all.prop, instance: t, const: .c_all) else { return nil }
+        let ax = trivial("(∀ x. P[x]) ⟶ P[t]")!
+        let thms = apply([all], goal: goal, to: ax)
+        return thms.first
+    }
+
+    public func choose(_ name : String, from: Theorem) -> Theorem? {
+        let const = Const("local.\(name)")!
+        guard let w = instantiate(binding: from.prop, instance: .constant(const, binders: [], params: []), const: .c_ex) else { return nil }
+        guard choose(const: const, where: w, prover: Prover.debug(Prover.fail)) else { return nil }
+        return kernel.lastAxiom
+    }
 
 }

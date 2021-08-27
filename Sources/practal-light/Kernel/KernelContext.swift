@@ -185,6 +185,10 @@ public struct KernelContext : Hashable, CustomStringConvertible {
         return KernelContext(parent: nil, extensions: extensions, axioms: axioms, constants: constants)
     }
     
+    public var lastAxiom : Theorem {
+        return axiom(axioms.count - 1)
+    }
+    
     private static func findOpeningDeclaration(const : Const, from : Int, extensions : [Ext]) -> Int? {
         var i = from
         while i >= 0 {

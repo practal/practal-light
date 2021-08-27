@@ -459,4 +459,21 @@
             unify("∀ x. P[x]", "∀ y. Q[y]")
             print("================================")
         }
+        
+        func testMendelsonRuleC() {
+            // Introduction to mathematical logic, Elliott Mendelson, page 80.
+            // Is the practal-light kernel inconsistent?
+            let context = Logics.minimalLogic()
+            context.declare("(A. x y)", syntax: "A x y")
+            let a = context.assume("∀ x. ∃ y. A x y")!
+            print("a = \(a)")
+            let c = context.spawn()
+            let x = c.parse("x")!
+            let t = c.allElim(a, x)!
+            //c.kernel.ch
+            print("t = \(t)")
+            let th = c.choose("d", from: t)!
+            print("th = \(th)")
+            
+        }
     }
