@@ -24,7 +24,6 @@ public struct KCChain {
         if let last = _contexts.last {
             guard context.parent == last.uuid else {
                 return false
-                
             }
             _contexts.append(context)
             return true
@@ -69,6 +68,14 @@ public struct KCChain {
             exts.append(contentsOf: contexts[i].extensions)
         }
         return exts
+    }
+    
+    public func debug() {
+        print("===========")
+        for c in _contexts {
+            print("id = \(c.uuid)")
+        }
+        print("===========")
     }
     
 }

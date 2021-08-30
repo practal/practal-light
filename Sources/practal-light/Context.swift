@@ -17,6 +17,7 @@ public final class Context {
     private var _parser : PractalExprParser
     private var _printer : PrettyPrinter
     private var _theorems : [String : Theorem]
+    private var top_context : Int
 
     fileprivate init(_ kc : KernelContext) {
         kcc = KCChain(kc)
@@ -25,15 +26,17 @@ public final class Context {
         _parser = PractalExprParser(syntax: syntax)
         _printer = PrettyPrinter(patterns: syntax)
         _theorems = [:]
+        top_context = 0
     }
     
     fileprivate init(_ parent : Context) {
-        kcc = KCChain(parent.kernel)
+        kcc = parent.kcc
         syntax = parent.syntax
         dirty_syntax = parent.dirty_syntax
         _parser = parent._parser
         _printer = parent._printer
         _theorems = parent._theorems
+        top_context = kcc.count - 1
     }
     
     private func refresh() {
@@ -87,7 +90,9 @@ public final class Context {
     }
     
     public func lift(_ thm : Theorem) -> Theorem? {
-        guard let kcIndex = kcc.find(thm.kc_uuid) else { return nil }
+        guard let kcIndex = kcc.find(thm.kc_uuid) else {
+            return nil
+        }
         return KernelContext.lift(thm, in: kcc, from: kcIndex, to: kcc.count - 1)!
     }
     
@@ -99,7 +104,7 @@ public final class Context {
     
     public func liftToTop(_ thm : Theorem) -> Theorem? {
         guard let kcIndex = kcc.find(thm.kc_uuid) else { return nil }
-        return KernelContext.lift(thm, in: kcc, from: kcIndex, to: 0)!
+        return KernelContext.lift(thm, in: kcc, from: kcIndex, to: top_context)!
     }
     
     public subscript (_ thm_name : String) -> Theorem {

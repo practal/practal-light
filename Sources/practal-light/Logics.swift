@@ -13,6 +13,8 @@ public struct Logics {
     public static let c_or = Const.mkC("or")
     public static let c_true = Const.mkC("true")
     public static let c_equiv = Const.mkC("equiv")
+    public static let c_false = Const.mkC("false")
+    public static let c_not = Const.mkC("not")
     public static let c_not_eq = Const.mkC("not-eq")
 
     public static func minimalLogic() -> Context {
@@ -46,6 +48,8 @@ public struct Logics {
         prove_eq_symmetric(context)
         prove_subst(context)
         prove_eq_transitive(context)
+        prove_imp_refl(context)
+        prove_imp_transitive(context)
         prove_true_is_true(context)
         prove_false_noteq_true(context)
         
@@ -74,6 +78,28 @@ public struct Logics {
         let eq_subst = c.trivial("x = y ⟶ y = z ⟶ x = z")!
         let th = c.apply(xy, yz, to: eq_subst).first!
         let lifted = context.lift(th, from: c)!
+        context.store(thm: lifted)
+    }
+    
+    private static func prove_imp_refl(_ context : Context) {
+        let c = context.spawn()
+        c.fix("p")
+        let p = c.assume("p")!
+        let lifted = context.lift(p, from: c)!
+        context.store(thm: lifted)
+    }
+
+    private static func prove_imp_transitive(_ context : Context) {
+        let c = context.spawn()
+        c.fix("p")
+        c.fix("q")
+        c.fix("r")
+        let pq = c.assume("p ⟶ q")!
+        let qr = c.assume("q ⟶ r")!
+        let p = c.assume("p")!
+        let q = c.apply(p, goal: "q", to: pq)!
+        let r = c.apply(q, goal: "r", to: qr)!
+        let lifted = context.lift(r, from: c)!
         context.store(thm: lifted)
     }
 
@@ -131,10 +157,6 @@ public struct Logics {
         context.store(thm: context.apply(eq: ineq_def, right: fneq)!)
     }
     
-            
-    public static let c_false = Const.mkC("false")
-    public static let c_not = Const.mkC("not")
-
     public static func intuitionisticLogic() -> Context {
         let context = minimalLogic()
         
@@ -149,7 +171,9 @@ public struct Logics {
     public static func classicalLogic() -> Context {
         let context = intuitionisticLogic()
         
-        context.axiom("¬ ¬ p ⟶ p")
+        context.axiom("p ∨ ¬p")
+        
+        prove_notnot(context)
         
         context.declare("(\(c_choose) x. P[x])", syntax: "ε x. `P", priority: S.BINDER_PRIO)
         context.axiom("(∃ x. P[x]) ⟶ P[ε x. P[x]]")
@@ -157,6 +181,23 @@ public struct Logics {
         context.def("(\(c_if). p A B)", "ε x. (p ⟶ x = A) ∧ (¬ p ⟶ x = B)", syntax: "if p then A else B", priority: S.CONTROL_PRIO)
         
         return context
+    }
+    
+    private static func prove_notnot(_ context : Context) {
+        let c = context.spawn()
+        c.fix("p")
+        let not_not_p = c.assume("¬¬p")!
+        let p_or_not_p = c.trivial("p ∨ ¬p")!
+        let not_not_def = c.trivial("(¬¬p) = (¬p ⟶ ⊥)")!
+        let r = c.apply(eq: not_not_def, left: not_not_p)!
+        let trans = c.trivial("(¬ p ⟶ ⊥) ⟶ (⊥ ⟶ p) ⟶ (¬ p ⟶ p)")!
+        let f = c.trivial("⊥ ⟶ p")!
+        let p = c.apply(r, f, to: trans).first!
+        let refl = c.trivial("p ⟶ p")!
+        let or = c.trivial("(p ∨ ¬p) ⟶ (p ⟶ p) ⟶ (¬p ⟶ p) ⟶ p")!
+        let th = c.apply(p_or_not_p, refl, p, to: or).first!
+        let lifted = context.lift(th, from: c)!
+        context.store(thm: lifted)
     }
     
     public static let c_is_Type = Const.mkC("is-Type")

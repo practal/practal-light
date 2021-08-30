@@ -394,7 +394,6 @@
         func testLogics() {
             let context = Logics.classicalLogic()
             print(context.kernel.description)
-
         }
         
         func testKernelContext() {
