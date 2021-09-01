@@ -456,6 +456,7 @@
             unify("G", "f G")
             unify("F[G[a]]", "F[b]")
             unify("∀ x. P[x]", "∀ y. Q[y]")
+            unify("f a", "y[a]") 
             print("================================")
         }
         
